@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=2.0">
+    <title>GWiki</title>
+<style type="text/css">
+.blocker {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(255,255,255,.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.blocker .content {
+    font-size: 2em;
+}
+</style>
+    <script type="text/javascript">
+
+Gwiki = function(opts) {
+    options = [{
+    }, opts || {}];
+    for (var i = 0; i < options.length; i++) {
+        for (var x in options[i]) this[x] = options[i][x];
+    }
+
+    if (!Skel.utils.implements('GwikiUI', this.ui)) throw "You must define a ui rendering engine by passing a 'ui' option in your options hash that implements the GwikiUI interface";
+}
+
+Gwiki.prototype = Object.create(Object.prototype);
+
+Gwiki.prototype.block = function(str) {
+    if (!str) str = "Sorry, something went wrong. Please reload the page.";
+    var blocker = document.createElement('div');
+    blocker.className = 'blocker';
+    blocker.innerHTML = '<div class="content">'+str+'</div>';
+    document.body.appendChild(blocker);
+}
+
+Gwiki.prototype.restore = function(state) {
+    for (var x in state) this[x] = state;
+    this.init();
+}
+
+Gwiki.prototype.init = function() {
+    if (this.currentItem === false) this.ui.askForHome();
+    else this.ui.drawStandardInterface();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    gwiki = new Gwiki();
+    if (typeof Storage == 'undefined') gwiki.block('Sorry, your web browser is too old for this. Please upgrade to something more reasonable.');
+    else {
+        if (typeof localStorage.gwikiState != 'undefined') state = JSON.parse(localStorage.gwikiState);
+        else state = {
+            parents : [],
+            nextItem : false,
+            currentItem : false,
+            prevItem : false
+        };
+
+        gwiki.restore(state);
+    }
+});
+    </script>
+</head>
+<body>
+<div id="body">
+    <header></header>
+    <section class="main"></section>
+    <footer></footer>
+</div>
+</body>
+</html>
