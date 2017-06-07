@@ -1,3 +1,5 @@
 vendor
 .swp
 .swo
+gapi-credentials.json
+config.local.json
