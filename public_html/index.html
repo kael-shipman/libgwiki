@@ -12,7 +12,10 @@
 
     <script type="text/javascript">
         function init() {
-            if (typeof Storage == 'undefined') gwiki.block('Sorry, your web browser is too old for this. Please upgrade to something more reasonable.');
+            var ui = new GwikiUI({
+                markdownParser: new Markdown.Converter()
+            });
+            if (typeof Storage == 'undefined') ui.block('Sorry, your web browser is too old for this. Please upgrade to something more reasonable.');
             else {
                 gapi.client.init({
                     discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
@@ -20,12 +23,9 @@
                     scope: 'https://www.googleapis.com/auth/drive.readonly'
                 }).then(function () {
                     // Instantiate worker objects
-                    var ui = new GwikiUI();
-                    window.gwiki = new Gwiki({
-                        ui: ui,
-                        markdownParser: new Markdown.Converter()
-                    });
-                    ui.gwiki = window.gwiki;
+                    window.gwiki = new Gwiki();
+
+                    ui.subscribeListeners(window.gwiki);
 
                     // Sign in
                     var manageSignin = function (signedIn) {
