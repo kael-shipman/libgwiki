@@ -20,26 +20,62 @@
     font-size: 2em;
 }
 </style>
+
+
+
     <script type="text/javascript">
 
-Gwiki = function(opts) {
-    options = [{
-    }, opts || {}];
-    for (var i = 0; i < options.length; i++) {
-        for (var x in options[i]) this[x] = options[i][x];
-    }
+Utils = {
+    merge : function() {
+        for (var i = 1; i < arguments.length; i++) {
+            for (var x in arguments[i]) arguments[0][x] = arguments[i][x];
+        }
+    },
 
-    if (!Skel.utils.implements('GwikiUI', this.ui)) throw "You must define a ui rendering engine by passing a 'ui' option in your options hash that implements the GwikiUI interface";
+    implements : function(iface, obj) {
+        if (typeof iface == 'string') {
+            if (typeof Skel.interfaces == 'undefined' || typeof Skel.interfaces[iface] == 'undefined') throw "No interface '"+iface+"' defined! You can define this interface by adding an array with interface methods and property names to the Skel.interfaces hash like so: `Skel.interfaces['"+iface+"'] = [ 'method1', 'method2', 'property1', 'property2', '...' ];`";
+            iface = Skel.interfaces[iface];
+        } else {
+            if (typeof iface != 'object' || typeof iface.length == 'undefined') throw "You must pass either an array containing method and property names or the name of a defined interface as the first parameter!";
+        }
+
+		if (typeof obj == null || typeof obj != 'object') return false;
+
+        for (var i = 0; i < iface.length; i++) {
+            if (typeof obj[iface[i]] == 'undefined') return false;
+        }
+        return true;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+Gwiki = function(opts) {
+    Utils.merge(this, {
+        parents : [],
+        nextItem : false,
+        currentItem : false,
+        prevItem : false
+    }, opts || {});
 }
 
 Gwiki.prototype = Object.create(Object.prototype);
+Gwiki.interface = ['block','restore','init'];
 
 Gwiki.prototype.block = function(str) {
     if (!str) str = "Sorry, something went wrong. Please reload the page.";
-    var blocker = document.createElement('div');
-    blocker.className = 'blocker';
-    blocker.innerHTML = '<div class="content">'+str+'</div>';
-    document.body.appendChild(blocker);
+    this.ui.block(str);
 }
 
 Gwiki.prototype.restore = function(state) {
@@ -48,25 +84,83 @@ Gwiki.prototype.restore = function(state) {
 }
 
 Gwiki.prototype.init = function() {
+    if (!Utils.implements(GwikiUI.interface, this.ui)) throw "You must define a ui rendering engine by passing a 'ui' option in your options hash that implements the GwikiUI interface";
     if (this.currentItem === false) this.ui.askForHome();
     else this.ui.drawStandardInterface();
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    gwiki = new Gwiki();
+
+
+
+
+
+
+
+
+GwikiUI = function(opts) {
+    Utils.merge(this, {}, opts || {});
+}
+
+GwikiUI.prototype = Object.create(Object.prototype);
+GwikiUI.interface = ['block','askForHome','drawStandardInterface'];
+
+GwikiUI.prototype.block = function(str) {
+    var blocker = document.createElement('div');
+    blocker.className = 'blocker';
+    blocker.innerHTML = '<div class="content">'+str+'</div>';
+    document.body.appendChild(blocker);
+    return blocker;
+}
+
+GwikiUI.prototype.askForHome = function() {
+    this.checkForGwiki();
+    var str = '<div class="homeForm"><label for="homeFolder">Home Folder: <input type="text" id="homeFolder" value="" placeholder="e.g., https://drive.google.com/folders/2gja3lkaw3j-faoejsdlkalgalskdga"> <button type="submit">Ok</button>';
+    var blocker = this.block(str);
+    blocker.getElementsByTagName('button')[0].addEventListener('click', function() {
+        var folder = document.getElementById("homeFolder");
+        console.log('Folder is '+folder);
+	});
+}
+
+GwikiUI.prototype.drawStandardInterface = function() {
+}
+
+GwikiUI.prototype.checkForGwiki = function() {
+    if (!Utils.implements(Gwiki.interface, this.gwiki)) throw "You must provide an instance of Gwiki as the `gwiki` property of a `GwikiUI`";
+}
+
+
+
+
+
+
+
+
+
+
+function init() {
+	gapi.client.init({
+		discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+		clientId: '885013016646-5lar99giu3cmhqortaivcm8mcd9420os.apps.googleusercontent.com',
+		scope: 'https://www.googleapis.com/auth/drive.readonly'
+	}).then(function () {
+		// Listen for sign-in state changes.
+		//gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+		// Handle the initial sign-in state.
+		//updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+	});
+
+    ui = new GwikiUI();
+    gwiki = new Gwiki({ ui: ui });
+	ui.gwiki = gwiki;
+
     if (typeof Storage == 'undefined') gwiki.block('Sorry, your web browser is too old for this. Please upgrade to something more reasonable.');
     else {
-        if (typeof localStorage.gwikiState != 'undefined') state = JSON.parse(localStorage.gwikiState);
-        else state = {
-            parents : [],
-            nextItem : false,
-            currentItem : false,
-            prevItem : false
-        };
-
-        gwiki.restore(state);
+        if (typeof localStorage.gwikiState != 'undefined') gwiki.restore(JSON.parse(localStorage.gwikiState));
+        else gwiki.init();
     }
-});
+}
     </script>
 </head>
 <body>
@@ -75,5 +169,15 @@ document.addEventListener('DOMContentLoaded', function() {
     <section class="main"></section>
     <footer></footer>
 </div>
+
+
+
+
+
+
+	<script async defer src="https://apis.google.com/js/api.js"
+	    onload="this.onload=function(){};gapi.load('client:auth2', init);"
+	    onreadystatechange="if (this.readyState === 'complete') this.onload()">
+	</script>
 </body>
 </html>
