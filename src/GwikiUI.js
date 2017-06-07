@@ -1,15 +1,10 @@
 GwikiUI = function(opts) {
-    Utils.merge(this, {
-        options : {
-            rootId : 'gwiki-ui'
-        }
-    }, opts || {});
+    Utils.merge(this, {}, opts || {});
+
+    // Sanity Check
+    if (typeof this.root == 'undefined' || typeof this.root.appendChild == 'undefined') throw "You must provide a root ui element as part of the options hash when you construct a GwikiUI object (something like `new GwikiUI({ root: document.getElementById('gwiki-ui') })`)";
 
     // Make initial UI
-
-    // Root
-    this.root = document.getElementById(this.options.rootId);
-
 
     // Header
     this.root.appendChild(document.createElement('header'));
@@ -57,7 +52,7 @@ GwikiUI.prototype.block = function(str) {
     var blocker = document.createElement('div');
     blocker.className = 'blocker';
     blocker.innerHTML = '<div class="content">'+str+'</div>';
-    document.body.appendChild(blocker);
+    this.root.appendChild(blocker);
     this.blocker = blocker;
     return blocker;
 }

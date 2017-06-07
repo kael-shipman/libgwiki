@@ -4,6 +4,7 @@
     <meta charset="utf8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=2.0">
     <title>GWiki</title>
+    <link type="text/css" rel="stylesheet" href="/assets/base.css">
     <link type="text/css" rel="stylesheet" href="/assets/Gwiki.css">
     <script type="text/javascript" src="/vendor/stackexchange/pagedown/Markdown.Converter.js"></script>
     <script type="text/javascript" src="/assets/Utils.js"></script>
@@ -13,6 +14,7 @@
     <script type="text/javascript">
         function init() {
             var ui = new GwikiUI({
+                root : document.getElementsByClassName('gwiki-ui')[0],
                 markdownParser: new Markdown.Converter()
             });
             if (typeof Storage == 'undefined') ui.block('Sorry, your web browser is too old for this. Please upgrade to something more reasonable.');
@@ -45,7 +47,7 @@
     </script>
 </head>
 <body>
-<div id="gwiki-ui">
+<div class="gwiki-ui">
 </div>
 <script async defer src="https://apis.google.com/js/api.js"
     onload="this.onload=function(){};gapi.load('client:auth2', init);"

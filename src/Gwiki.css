@@ -1,4 +1,21 @@
-.blocker {
+/**
+ * Default styles for GwikiUI
+ */
+
+.gwiki-ui {
+    position: relative;
+}
+
+.gwiki-ui h1,
+.gwiki-ui h2,
+.gwiki-ui h3,
+.gwiki-ui h4,
+.gwiki-ui h5,
+.gwiki-ui h6 {
+    font-weight: 300;
+}
+
+.gwiki-ui .blocker {
     position: fixed;
     top: 0;
     right: 0;
@@ -9,7 +26,114 @@
     justify-content: center;
     align-items: center;
 }
-.blocker .content {
+.gwiki-ui .blocker .content {
     font-size: 2em;
 }
+
+
+
+
+
+.gwiki-ui .gwiki-header {
+    display: flex;
+    align-items: baseline;
+    height: 6rem;
+    overflow: hidden;
+}
+
+.gwiki-ui .gwiki-site-title {
+    cursor: pointer;
+    font-size: 3rem;
+    font-weight: 700;
+    flex: 3;
+    margin: 0;
+}
+
+.gwiki-ui .gwiki-main-menu {
+    flex: 4;
+    padding: 20px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.gwiki-ui .gwiki-main-menu a {
+    padding: 10px;
+    font-size: 1.3rem;
+    color: #444;
+    font-weight: bold;
+}
+
+
+
+
+
+
+.gwiki-ui .gwiki-main {
+    height: calc(100vh - 9rem);
+    overflow: hidden;
+    display: flex;
+    justify-content: left;
+    align-items: stretch;
+}
+
+.gwiki-ui .gwiki-sub-menu {
+    padding: 20px 10px 20px 20px;
+    flex: 2;
+    min-width: 250px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.gwiki-ui .gwiki-sub-menu a {
+    display: block;
+    padding: 10px;
+}
+
+.gwiki-ui .gwiki-main-content {
+    height: 100%;
+    overflow-y: auto;
+    flex: 5;
+    padding: 20px 20px 20px 10px;
+}
+
+
+
+
+
+
+/* Markdown formatting */
+
+
+.gwiki-ui .gwiki-main-content h1:first-of-type { margin-top: 0; }
+.gwiki-ui .gwiki-main-content h1 { font-size: 2.7rem; font-weight: 400; text-decoration: underline; }
+.gwiki-ui .gwiki-main-content h2 { font-size: 2.3rem; }
+.gwiki-ui .gwiki-main-content h3 { font-size: 1.9rem; }
+.gwiki-ui .gwiki-main-content h4 { font-size: 1.6rem; }
+.gwiki-ui .gwiki-main-content h5 { font-size: 1.3rem; }
+.gwiki-ui .gwiki-main-content h6 { font-size: 1.1rem; }
+
+
+.gwiki-ui .gwiki-main-content code {
+    background-color: #e5e5e5;
+    padding: 1px 6px;
+    border-radius: 2px;
+}
+
+.gwiki-ui .gwiki-main-content blockquote {
+    margin: 2rem 0;
+    border-radius: 5px;
+    background-color: #FDFECA;
+    border-left: 6px solid #FDDC9A;
+    padding: 20px;
+}
+
+.gwiki-ui .gwiki-main-content blockquote *:first-child {
+    margin-top: 0;
+}
+
+.gwiki-ui .gwiki-main-content blockquote *:last-child {
+    margin-bottom: 0;
+}
+
 
