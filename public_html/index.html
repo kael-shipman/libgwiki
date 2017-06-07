@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=2.0">
     <title>GWiki</title>
     <link type="text/css" rel="stylesheet" href="/assets/Gwiki.css">
-    <script type="text/css" src="/assets/Utils.js"></script>
-    <script type="text/css" src="/assets/Gwiki.js"></script>
-    <script type="text/css" src="/assets/GwikiUI.js"></script>
+    <script type="text/javascript" src="/vendor/stackexchange/pagedown/Markdown.Converter.js"></script>
+    <script type="text/javascript" src="/assets/Utils.js"></script>
+    <script type="text/javascript" src="/assets/Gwiki.js"></script>
+    <script type="text/javascript" src="/assets/GwikiUI.js"></script>
 
     <script type="text/javascript">
         function init() {
@@ -20,16 +21,24 @@
                 }).then(function () {
                     // Instantiate worker objects
                     var ui = new GwikiUI();
-                    window.gwiki = new Gwiki({ ui: ui });
+                    window.gwiki = new Gwiki({
+                        ui: ui,
+                        markdownParser: new Markdown.Converter()
+                    });
                     ui.gwiki = window.gwiki;
 
-                    // Listen for sign-in state changes.
-                    //gapi.auth2.getAuthInstance().isSignedIn.listen(toggleInterface);
-
-                    // Handle the initial sign-in state.
-                    //toggleInterface(gapi.auth2.getAuthInstance().isSignedIn.get());
-
-                    gwiki.init();
+                    // Sign in
+                    var manageSignin = function (signedIn) {
+                        if (signedIn) {
+                            if (!window.gwiki.initialized) gwiki.init();
+                        } else {
+                            gapi.auth2.getAuthInstance().signIn();
+                        }
+                    }
+                    // Listen for changes in authentication
+                    gapi.auth2.getAuthInstance().isSignedIn.listen(manageSignin);
+                    // Kick everything off
+                    manageSignin(gapi.auth2.getAuthInstance().isSignedIn.get());
                 });
             }
         }

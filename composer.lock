@@ -1,0 +1,47 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "4627453c034fbaa59312577a2683681b",
+    "packages": [
+        {
+            "name": "stackexchange/pagedown",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kael-shipman/pagedown.git",
+                "reference": "6c619eb94392ebe419d609ee82f01451756d16c0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kael-shipman/pagedown/zipball/6c619eb94392ebe419d609ee82f01451756d16c0",
+                "reference": "6c619eb94392ebe419d609ee82f01451756d16c0",
+                "shasum": ""
+            },
+            "type": "library",
+            "license": [
+                "MIT"
+            ],
+            "description": "markdown converter, based on showdown",
+            "homepage": "http://code.google.com/p/pagedown/wiki/PageDown",
+            "keywords": [
+                "markdown"
+            ],
+            "support": {
+                "issues": "http://code.google.com/p/pagedown/issues/list",
+                "source": "https://code.google.com/p/pagedown/"
+            },
+            "time": "2017-06-07T18:58:13+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": [],
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

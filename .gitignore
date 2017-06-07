@@ -1,4 +1,4 @@
-vendor
+/vendor
 .swp
 .swo
 gapi-credentials.json

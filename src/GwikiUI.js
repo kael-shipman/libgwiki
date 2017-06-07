@@ -8,11 +8,14 @@ GwikiUI = function(opts) {
     // Make initial UI
     this.root = document.getElementById(this.options.rootId);
     this.root.appendChild(document.createElement('header'));
-    this.root.lastChild.className = 'gwiki-header';
+    this.header = this.root.lastChild;
+    this.header.className = 'gwiki-header';
     this.root.appendChild(document.createElement('section'));
-    this.root.lastChild.className = 'gwiki-main';
+    this.main = this.root.lastChild;
+    this.main.className = 'gwiki-main';
     this.root.appendChild(document.createElement('footer'));
-    this.root.lastChild.className = 'gwiki-footer';
+    this.footer = this.root.lastChild;
+    this.footer.className = 'gwiki-footer';
 }
 
 GwikiUI.prototype = Object.create(Object.prototype);
@@ -27,7 +30,15 @@ GwikiUI.prototype.block = function(str) {
     blocker.className = 'blocker';
     blocker.innerHTML = '<div class="content">'+str+'</div>';
     document.body.appendChild(blocker);
+    this.blocker = blocker;
     return blocker;
+}
+
+GwikiUI.prototype.unblock = function() {
+    if (this.blocker) {
+        this.blocker.parentElement.removeChild(this.blocker);
+        this.blocker = null;
+    }
 }
 
 
@@ -63,6 +74,19 @@ GwikiUI.prototype.askForHome = function() {
 // On load any page
 GwikiUI.prototype.drawStandardInterface = function() {
     var body = document.getElementById('gwiki-ui');
+}
+
+
+
+
+
+
+GwikiUI.prototype.setMainContent = function(content) {
+    if (typeof content == 'string') this.main.innerHTML = content;
+    else {
+        this.main.innerHTML = '';
+        this.main.appendChild(content);
+    }
 }
 
 
