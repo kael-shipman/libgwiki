@@ -13,36 +13,35 @@
 
     <script type="text/javascript">
         function init() {
+            Gwiki.consumableTypes.push('application/vnd.google-apps.spreadsheet');
             var ui = new GwikiUI({
                 root : document.getElementsByClassName('gwiki-ui')[0],
                 markdownParser: new Markdown.Converter()
             });
-            if (typeof Storage == 'undefined') ui.block('Sorry, your web browser is too old for this. Please upgrade to something more reasonable.');
-            else {
-                gapi.client.init({
-                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-                    clientId: '885013016646-5lar99giu3cmhqortaivcm8mcd9420os.apps.googleusercontent.com',
-                    scope: 'https://www.googleapis.com/auth/drive.readonly'
-                }).then(function () {
-                    // Instantiate worker objects
-                    window.gwiki = new Gwiki();
 
-                    ui.subscribeListeners(window.gwiki);
+            gapi.client.init({
+                discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+                clientId: '885013016646-5lar99giu3cmhqortaivcm8mcd9420os.apps.googleusercontent.com',
+                scope: 'https://www.googleapis.com/auth/drive.readonly'
+            }).then(function () {
+                // Instantiate worker objects
+                window.gwiki = new Gwiki();
 
-                    // Sign in
-                    var manageSignin = function (signedIn) {
-                        if (signedIn) {
-                            if (!window.gwiki.initialized) gwiki.init();
-                        } else {
-                            gapi.auth2.getAuthInstance().signIn();
-                        }
+                ui.subscribeListeners(window.gwiki);
+
+                // Sign in
+                var manageSignin = function (signedIn) {
+                    if (signedIn) {
+                        if (!window.gwiki.initialized) gwiki.init();
+                    } else {
+                        gapi.auth2.getAuthInstance().signIn();
                     }
-                    // Listen for changes in authentication
-                    gapi.auth2.getAuthInstance().isSignedIn.listen(manageSignin);
-                    // Kick everything off
-                    manageSignin(gapi.auth2.getAuthInstance().isSignedIn.get());
-                });
-            }
+                }
+                // Listen for changes in authentication
+                gapi.auth2.getAuthInstance().isSignedIn.listen(manageSignin);
+                // Kick everything off
+                manageSignin(gapi.auth2.getAuthInstance().isSignedIn.get());
+            });
         }
     </script>
 </head>

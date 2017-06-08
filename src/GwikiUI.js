@@ -134,12 +134,15 @@ GwikiUI.prototype.loadStandardInterface = function(gwiki) {
 GwikiUI.prototype.updateStandardInterface = function(gwiki) {
     // If there's no current item selected, reset interface
     if (!gwiki.currentItem) {
-        this.mainContent.innerHTML = GwikiUI.strings['err-nocontent'].replace('$id', gwiki.parents[0]);
+        this.mainContent.innerHTML = GwikiUI.strings['err-nocontent'].replace('$id', gwiki.parents[0].id);
     } else {
         // Set content
         if (gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.markdownParser.makeHtml(gwiki.currentItem.body);
-        else if (gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = gwiki.currentItem.body;
-        else this.mainContent.innerHTML = '<iframe class="google-doc" src="https://docs.google.com/document/d/'+gwiki.currentItem.id+'/preview">'
+        else if (gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = this.cleanHtml(gwiki.currentItem.body);
+        else {
+            var str = this.getEmbedString(gwiki);
+            this.mainContent.innerHTML = this.getEmbedString(gwiki);
+        }
     }
 
 
@@ -168,6 +171,12 @@ GwikiUI.prototype.updateStandardInterface = function(gwiki) {
                 e.preventDefault();
                 gwiki.setCurrentItem(e.target.gobject);
             });
+
+            // If this looks like the group header, make it stand out
+            if (gwiki.parents[0].displayName == gwiki.parents[0].children[i].displayName) this.subMenu[i].classList.add('gwiki-group-header');
+
+            // If this one is selected, show that
+            if (gwiki.currentItem && gwiki.parents[0].children[i].displayName == gwiki.currentItem.displayName) this.subMenu[i].classList.add('selected');
         }
     }
 }
@@ -211,11 +220,35 @@ GwikiUI.prototype.subscribeListeners = function(gwiki) {
 
 
 
+GwikiUI.prototype.cleanHtml = function(html) {
+    var st = html.indexOf('<body>');
+    if (st > -1) html = html.substr(st+6);
+
+    var end = html.indexOf('</body>');
+    if (end > -1) html = html.substr(0, end);
+
+    return html;
+}
+
+GwikiUI.prototype.getEmbedString = function(gwiki) {
+    var i = gwiki.currentItem;
+    if (i.mimeType == 'application/vnd.google-apps.document') return '<iframe class="google-doc" src="https://docs.google.com/document/d/'+i.id+'/preview">';
+    else if (i.mimeType == 'application/vnd.google-apps.spreadsheet') return '<iframe class="google-doc" src="https://docs.google.com/spreadsheets/d/'+i.id+'/preview">';
+    else return Gwiki.strings['err-unknownembedtype'].replace('$type', i.mimeType);
+}
+
+
+
+
+
+
+
 
 // String library
 
 GwikiUI.strings = {
     'title' : 'Gwiki',
-    'err-nocontent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.'
+    'err-nocontent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.',
+    'err-unknownembedtype' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type</p>'
 }
 

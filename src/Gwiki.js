@@ -14,16 +14,9 @@ Gwiki.interface = ['init', 'setHome','persist'];
 Gwiki.prototype.init = function() {
     // Sanity checks on init
     if (typeof gapi == 'undefined') throw "This library requires a valid gapi instance. Please see https://developers.google.com/drive/v3/web/quickstart/js for information on initializing the gapi javascript client.";
-    if (typeof Storage == 'undefined') {
-        this.dispatchEvent('error', {
-            type : 'IncompatibleEnvironmentError',
-            message : 'Sorry, your web browser is too old for this. Please upgrade to something more reasonable.'
-        });
-        return false;
-    }
 
     // Restore previous state, if any
-    if (typeof localStorage.gwikiState != 'undefined') {
+    if (typeof Storage != 'undefined' && typeof localStorage.gwikiState != 'undefined') {
         var state = JSON.parse(localStorage.gwikiState);
         for (var x in state) this[x] = state[x];
     }
@@ -89,10 +82,7 @@ Gwiki.prototype.setExtraAttributes = function(item) {
 
     // See if it's "consumable" by our wiki
     item.isConsumable = (
-        type == 'application/vnd.google-apps.folder' ||
-        type == 'application/vnd.google-apps.document' ||
-        type == 'text/x-markdown' ||
-        type == 'text/markdown' ||
+        Gwiki.consumableTypes.indexOf(type) > -1 ||
         item.name.substr(-3) == '.md'
     );
 
@@ -214,12 +204,14 @@ Gwiki.prototype.getChildren = function(folderId) {
 }
 
 Gwiki.prototype.persist = function() {
-    localStorage.gwikiState = JSON.stringify({
-        home : this.home,
-        parents : this.parents,
-        currentItem : this.currentItem,
-        mainMenu : this.mainMenu
-    });
+    if (typeof Storage != 'undefined') {
+        localStorage.gwikiState = JSON.stringify({
+            home : this.home,
+            parents : this.parents,
+            currentItem : this.currentItem,
+            mainMenu : this.mainMenu
+        });
+    }
 }
 
 
@@ -270,4 +262,19 @@ Gwiki.prototype.dispatchEvent = function(eventName, props) {
     
     return !preventDefault;
 }
+
+
+
+
+
+
+
+
+
+Gwiki.consumableTypes = [
+    'application/vnd.google-apps.folder',
+    'application/vnd.google-apps.document',
+    'text/x-markdown',
+    'text/markdown'
+];
 

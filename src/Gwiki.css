@@ -58,10 +58,24 @@
 }
 
 .gwiki-ui .gwiki-main-menu a {
-    padding: 10px;
+    padding: 5px 10px;
+    margin: 0 2px;
     font-size: 1.3rem;
     color: #444;
     font-weight: bold;
+    background-color: transparent;
+    border-radius: 5px;
+    transition: background-color .3s, color .3s;
+}
+
+.gwiki-ui .gwiki-main-menu a:hover {
+    background-color: #eee;
+    color: #444;
+}
+
+.gwiki-ui .gwiki-main-menu .selected {
+    background-color: #0E9CCA;
+    color: white;
 }
 
 
@@ -90,11 +104,26 @@
     padding: 10px;
 }
 
+.gwiki-ui .gwiki-sub-menu .gwiki-group-header {
+    font-size: 1.6em;
+    text-decoration: underline;
+}
+
+.gwiki-ui .gwiki-sub-menu .selected {
+    font-weight: 700;
+}
+
 .gwiki-ui .gwiki-main-content {
     height: 100%;
     overflow-y: auto;
     flex: 5;
     padding: 20px 20px 20px 10px;
+}
+
+.gwiki-ui .gwiki-main-content .google-doc {
+    width: 98%;
+    height: 98%;
+    border: none;
 }
 
 
