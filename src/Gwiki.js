@@ -97,12 +97,10 @@ Gwiki.prototype.setExtraAttributes = function(item) {
     );
 
     // See if it's text format
-    item.isText = (
-        type == 'text/x-markdown' ||
-        type == 'text/markdown' ||
-        type == 'text/plain' ||
-        type == 'text/html'
-    );
+    if (type == 'text/x-markdown' || type == 'text/markdown' || type == 'text/plain' || item.name.substr(-3) == '.md') item.gwikiType = 'text/markdown';
+    else if (type == 'text/html' || type == 'application/vnd.google-apps.document') item.gwikiType = 'text/html';
+    else item.gwikiType = 'unknown';
+    
 
     // Remove prefixes and suffixes for display names
     var displayName = item.name;
@@ -118,9 +116,36 @@ Gwiki.prototype.setExtraAttributes = function(item) {
 
 Gwiki.prototype.setCurrentItem = function(item) {
     var t = this;
+
+    // If we've passed a null item, we're dealing with an empty folder.
+    // Set currentItem to null and fall out
+    if (!item) {
+        this.currentItem = null;
+        this.persist();
+        this.dispatchEvent('setCurrentItem', { gwiki : this });
+        return;
+    }
+
+
+    // Remove all parents that are not anscestors of item
+    while (this.parents.length > 1) {
+        var found = false;
+        for (var i = 0; i < this.parents[0].children.length; i++) {
+            if (item.id == this.parents[0].children[i].id) found = true;
+            if (found) break;
+        }
+        if (found) break;
+        this.parents.shift();
+    }
+    
+
+    // If we've reached a file...
     if (item.mimeType != 'application/vnd.google-apps.folder') {
+        // Set the current item to the doc
         this.currentItem = item;
-        if (this.currentItem.isText) {
+        
+        // If it's markdown, download the content
+        if (this.currentItem.gwikiType == 'text/markdown') {
             gapi.client.drive.files.get({
                 'fileId' : this.currentItem.id,
                 'alt' : 'media'
@@ -129,17 +154,36 @@ Gwiki.prototype.setCurrentItem = function(item) {
                 t.persist();
                 t.dispatchEvent('setCurrentItem', { gwiki : t });
             });
+
+        // If it's a doc, export it as html
+        } else if (this.currentItem.mimeType == 'application/vnd.google-apps.document') {
+            gapi.client.drive.files.export({
+                fileId : this.currentItem.id,
+                mimeType : 'text/html'
+            }).then(function(response) {
+                t.currentItem.body = response.body;
+                t.persist();
+                t.dispatchEvent('setCurrentItem', { gwiki : t });
+            });
+
+        // Otherwise, let the ui figure out what to do with it
         } else {
             this.persist();
             this.dispatchEvent('setCurrentItem', { gwiki : this });
         }
+
+
+    // If we've reached a folder, fall through to the most appropriate doc
     } else {
-        this.rewindParentsTo(item);
+        // Add this folder to the parent hierarchy
         this.parents.unshift(item);
+
+        // Get children
         this.getChildren(item.id).then(function(response) {
             var children = t.menuize(response.result.files);
-            var selected = false;
-            // If there's a text file of the same name as the folder, that's our item, that should be the menu header and is selected
+            var selected = null;
+
+            // See if there's a doc with the same name as the folder. If so, that's our selection
             for (var i = 0; i < children.length; i++) {
                 if (children[i].displayName == item.displayName) {
                     selected = children.splice(i,1)[0];
@@ -147,24 +191,17 @@ Gwiki.prototype.setCurrentItem = function(item) {
                     break;
                 }
             }
-            // If there's no text file with the same name as the folder, just default to the first item
+
+            // If there's no doc with the same name as the folder, just default to the first item
             if (!selected) selected = children[0];
+
+            // Record children on this parent node
             item.children = children;
+
+            // Now try again with the selection
             t.setCurrentItem(selected);
         });
     }
-}
-
-
-Gwiki.prototype.rewindParentsTo = function(item) {
-    var selected = false;
-    for (var i = 0; i < this.parents.length; i++) {
-        if (this.parents[i].id == item.id) {
-            selected = i;
-            break;
-        }
-    }
-    if (selected !== false) this.parents.splice(selected, (this.parents.length - selected));
 }
 
 

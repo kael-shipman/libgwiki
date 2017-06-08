@@ -132,9 +132,15 @@ GwikiUI.prototype.loadStandardInterface = function(gwiki) {
 
 
 GwikiUI.prototype.updateStandardInterface = function(gwiki) {
-    // Set content
-    if (gwiki.currentItem.body) this.mainContent.innerHTML = this.markdownParser.makeHtml(gwiki.currentItem.body);
-    else this.mainContent.innerHTML = '<iframe class="google-doc" src="https://docs.google.com/document/d/'+gwiki.currentItem.id+'/preview">'
+    // If there's no current item selected, reset interface
+    if (!gwiki.currentItem) {
+        this.mainContent.innerHTML = GwikiUI.strings['err-nocontent'].replace('$id', gwiki.parents[0]);
+    } else {
+        // Set content
+        if (gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.markdownParser.makeHtml(gwiki.currentItem.body);
+        else if (gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = gwiki.currentItem.body;
+        else this.mainContent.innerHTML = '<iframe class="google-doc" src="https://docs.google.com/document/d/'+gwiki.currentItem.id+'/preview">'
+    }
 
 
     // Select main menu item
@@ -209,6 +215,7 @@ GwikiUI.prototype.subscribeListeners = function(gwiki) {
 // String library
 
 GwikiUI.strings = {
-    'title' : 'Gwiki'
+    'title' : 'Gwiki',
+    'err-nocontent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.'
 }
 
