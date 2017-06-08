@@ -3,12 +3,16 @@ Gwiki = function(opts) {
         home : null,
         parents : [],
         currentItem : null,
-        mainMenu : []
+        mainMenu : [],
+        persistence : true
     }, opts || {});
 }
 
+
+
 Gwiki.prototype = Object.create(Object.prototype);
-Gwiki.interface = ['init', 'setHome','persist'];
+Gwiki.interface = ['init', 'setHome','persist', 'menuize', 'setExtraAttributes', 'setCurrentItem', 'getItemById', 'getChildren', 'addEventListener', 'removeEventListener', 'dispatchEvent' ];
+
 
 
 Gwiki.prototype.init = function() {
@@ -16,14 +20,16 @@ Gwiki.prototype.init = function() {
     if (typeof gapi == 'undefined') throw "This library requires a valid gapi instance. Please see https://developers.google.com/drive/v3/web/quickstart/js for information on initializing the gapi javascript client.";
 
     // Restore previous state, if any
-    if (typeof Storage != 'undefined' && typeof localStorage.gwikiState != 'undefined') {
+    if (this.persistence && typeof Storage != 'undefined' && typeof localStorage.gwikiState != 'undefined') {
         var state = JSON.parse(localStorage.gwikiState);
         for (var x in state) this[x] = state[x];
     }
 
     this.initialized = true;
-    this.dispatchEvent('init', { gwiki : this });
+    this.dispatchEvent('init');
 }
+
+
 
 Gwiki.prototype.setHome = function(folderId) {
     var t = this;
@@ -32,7 +38,7 @@ Gwiki.prototype.setHome = function(folderId) {
         this.currentItem = null;
         this.parents = [];
         this.mainMenu = [];
-        this.dispatchEvent('setHome', { gwiki : this });
+        this.dispatchEvent('setHome');
         this.persist();
         return;
     }
@@ -56,10 +62,152 @@ Gwiki.prototype.setHome = function(folderId) {
             t.setCurrentItem(t.home);
 
             // Tell listeners that we've set home
-            t.dispatchEvent('setHome', { gwiki : t });
+            t.dispatchEvent('setHome');
         });
     });
 }
+
+
+
+Gwiki.prototype.setCurrentItem = function(item) {
+    var t = this;
+
+    // If we've passed a null item, we're dealing with an empty folder.
+    // Set currentItem to null and fall out
+    if (!item) {
+        this.currentItem = null;
+        this.persist();
+        this.dispatchEvent('setCurrentItem');
+        return;
+    }
+
+
+    // Remove all parents that are not anscestors of item
+    while (this.parents.length > 1) {
+        var found = false;
+        for (var i = 0; i < this.parents[0].children.length; i++) {
+            if (item.id == this.parents[0].children[i].id) found = true;
+            if (found) break;
+        }
+        if (found) break;
+        this.parents.shift();
+    }
+    
+
+    // If we've reached a file...
+    if (item.mimeType != 'application/vnd.google-apps.folder') {
+        // Set the current item to the doc
+        this.currentItem = item;
+        
+        // If it's markdown, download the content
+        if (this.currentItem.gwikiType == 'text/markdown') {
+            gapi.client.drive.files.get({
+                'fileId' : this.currentItem.id,
+                'alt' : 'media'
+            }).then(function(response) {
+                t.currentItem.body = response.body;
+                t.persist();
+                t.dispatchEvent('setCurrentItem');
+            });
+
+        // If it's a doc, export it as html
+        } else if (this.currentItem.mimeType == 'application/vnd.google-apps.document') {
+            gapi.client.drive.files.export({
+                fileId : this.currentItem.id,
+                mimeType : 'text/html'
+            }).then(function(response) {
+                t.currentItem.body = response.body;
+                t.persist();
+                t.dispatchEvent('setCurrentItem');
+            });
+
+        // Otherwise, let the ui figure out what to do with it
+        } else {
+            this.persist();
+            this.dispatchEvent('setCurrentItem');
+        }
+
+
+    // If we've reached a folder, fall through to the most appropriate doc
+    } else {
+        // Add this folder to the parent hierarchy
+        this.parents.unshift(item);
+
+        // Get children
+        this.getChildren(item.id).then(function(response) {
+            var children = t.menuize(response.result.files);
+            var selected = null;
+
+            // See if there's a doc with the same name as the folder. If so, that's our selection
+            for (var i = 0; i < children.length; i++) {
+                if (children[i].displayName == item.displayName) {
+                    selected = children.splice(i,1)[0];
+                    children.unshift(selected);
+                    break;
+                }
+            }
+
+            // If there's no doc with the same name as the folder, just default to the first item
+            if (!selected) selected = children[0];
+
+            // Record children on this parent node
+            item.children = children;
+
+            // Now try again with the selection
+            t.setCurrentItem(selected);
+        });
+    }
+}
+
+
+
+Gwiki.prototype.persist = function() {
+    if (typeof Storage != 'undefined' && this.persistence) {
+        localStorage.gwikiState = JSON.stringify({
+            home : this.home,
+            parents : this.parents,
+            currentItem : this.currentItem,
+            mainMenu : this.mainMenu
+        });
+    }
+}
+
+
+
+
+
+
+
+
+// gapi abstractions
+
+Gwiki.prototype.getItemById = function(id) {
+    return gapi.client.drive.files.get({
+        'fileId' : id
+    });
+}
+
+
+
+Gwiki.prototype.getChildren = function(folderId) {
+    return gapi.client.drive.files.list({
+        'q' : "'"+folderId+"' in parents and trashed = false",
+        'pageSize' : 1000,
+        'fields' : 'files(id, name, mimeType)'
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+// Utility functions
 
 Gwiki.prototype.menuize = function(items) {
     var menuItems = [];
@@ -112,123 +260,6 @@ Gwiki.prototype.setExtraAttributes = function(item) {
 
 
 
-Gwiki.prototype.setCurrentItem = function(item) {
-    var t = this;
-
-    // If we've passed a null item, we're dealing with an empty folder.
-    // Set currentItem to null and fall out
-    if (!item) {
-        this.currentItem = null;
-        this.persist();
-        this.dispatchEvent('setCurrentItem', { gwiki : this });
-        return;
-    }
-
-
-    // Remove all parents that are not anscestors of item
-    while (this.parents.length > 1) {
-        var found = false;
-        for (var i = 0; i < this.parents[0].children.length; i++) {
-            if (item.id == this.parents[0].children[i].id) found = true;
-            if (found) break;
-        }
-        if (found) break;
-        this.parents.shift();
-    }
-    
-
-    // If we've reached a file...
-    if (item.mimeType != 'application/vnd.google-apps.folder') {
-        // Set the current item to the doc
-        this.currentItem = item;
-        
-        // If it's markdown, download the content
-        if (this.currentItem.gwikiType == 'text/markdown') {
-            gapi.client.drive.files.get({
-                'fileId' : this.currentItem.id,
-                'alt' : 'media'
-            }).then(function(response) {
-                t.currentItem.body = response.body;
-                t.persist();
-                t.dispatchEvent('setCurrentItem', { gwiki : t });
-            });
-
-        // If it's a doc, export it as html
-        } else if (this.currentItem.mimeType == 'application/vnd.google-apps.document') {
-            gapi.client.drive.files.export({
-                fileId : this.currentItem.id,
-                mimeType : 'text/html'
-            }).then(function(response) {
-                t.currentItem.body = response.body;
-                t.persist();
-                t.dispatchEvent('setCurrentItem', { gwiki : t });
-            });
-
-        // Otherwise, let the ui figure out what to do with it
-        } else {
-            this.persist();
-            this.dispatchEvent('setCurrentItem', { gwiki : this });
-        }
-
-
-    // If we've reached a folder, fall through to the most appropriate doc
-    } else {
-        // Add this folder to the parent hierarchy
-        this.parents.unshift(item);
-
-        // Get children
-        this.getChildren(item.id).then(function(response) {
-            var children = t.menuize(response.result.files);
-            var selected = null;
-
-            // See if there's a doc with the same name as the folder. If so, that's our selection
-            for (var i = 0; i < children.length; i++) {
-                if (children[i].displayName == item.displayName) {
-                    selected = children.splice(i,1)[0];
-                    children.unshift(selected);
-                    break;
-                }
-            }
-
-            // If there's no doc with the same name as the folder, just default to the first item
-            if (!selected) selected = children[0];
-
-            // Record children on this parent node
-            item.children = children;
-
-            // Now try again with the selection
-            t.setCurrentItem(selected);
-        });
-    }
-}
-
-
-Gwiki.prototype.getItemById = function(id) {
-    return gapi.client.drive.files.get({
-        'fileId' : id
-    });
-}
-
-
-Gwiki.prototype.getChildren = function(folderId) {
-    return gapi.client.drive.files.list({
-        'q' : "'"+folderId+"' in parents and trashed = false",
-        'pageSize' : 1000,
-        'fields' : 'files(id, name, mimeType)'
-    });
-}
-
-Gwiki.prototype.persist = function() {
-    if (typeof Storage != 'undefined') {
-        localStorage.gwikiState = JSON.stringify({
-            home : this.home,
-            parents : this.parents,
-            currentItem : this.currentItem,
-            mainMenu : this.mainMenu
-        });
-    }
-}
-
 
 
 
@@ -263,9 +294,11 @@ Gwiki.prototype.dispatchEvent = function(eventName, props) {
     if (typeof this.eventListeners == 'undefined') this.eventListeners = {};
     if (typeof this.eventListeners[eventName] == 'undefined') return true;
 
+    var e = { gwiki : this };
+    Utils.merge(e, props || {});
+
     var stopPropagation = false;
     var preventDefault = false;
-    var e = props || {};
     e.stopPropagation = function() { stopPropagation = true; }
     e.preventDefault = function() { preventDefault = true; }
 
@@ -289,6 +322,7 @@ Gwiki.prototype.dispatchEvent = function(eventName, props) {
 Gwiki.consumableTypes = [
     'application/vnd.google-apps.folder',
     'application/vnd.google-apps.document',
+    'application/vnd.google-apps.spreadsheet',
     'text/x-markdown',
     'text/markdown',
     'text/plain'

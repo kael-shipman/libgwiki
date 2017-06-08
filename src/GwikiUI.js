@@ -48,26 +48,25 @@ GwikiUI = function(opts) {
 GwikiUI.prototype = Object.create(Object.prototype);
 GwikiUI.interface = ['block','askForHome','drawStandardInterface'];
 
-GwikiUI.prototype.block = function(str) {
-    var blocker = document.createElement('div');
-    blocker.className = 'blocker';
-    blocker.innerHTML = '<div class="content">'+str+'</div>';
-    this.root.appendChild(blocker);
-    this.blocker = blocker;
-    return blocker;
-}
-
-GwikiUI.prototype.unblock = function() {
-    if (this.blocker) {
-        this.blocker.parentElement.removeChild(this.blocker);
-        this.blocker = null;
-    }
-}
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Interface Functions
 
 // On first load or when resetting home
 GwikiUI.prototype.askForHome = function(gwiki) {
@@ -86,14 +85,6 @@ GwikiUI.prototype.askForHome = function(gwiki) {
 }
 
 
-
-
-
-
-
-
-
-// Standard Interface
 
 // Load the interface on init and when home changes
 GwikiUI.prototype.loadStandardInterface = function(gwiki) {
@@ -130,14 +121,14 @@ GwikiUI.prototype.loadStandardInterface = function(gwiki) {
 
 
 
-
+// Update the interfaces (usually in response to the user selecting an item)
 GwikiUI.prototype.updateStandardInterface = function(gwiki) {
     // If there's no current item selected, reset interface
     if (!gwiki.currentItem) {
         this.mainContent.innerHTML = GwikiUI.strings['err-nocontent'].replace('$id', gwiki.parents[0].id);
     } else {
         // Set content
-        if (gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.markdownParser.makeHtml(gwiki.currentItem.body);
+        if (gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.parseMarkdown(gwiki.currentItem.body);
         else if (gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = this.cleanHtml(gwiki.currentItem.body);
         else {
             var str = this.getEmbedString(gwiki);
@@ -183,33 +174,24 @@ GwikiUI.prototype.updateStandardInterface = function(gwiki) {
 }
 
 
-GwikiUI.prototype.parseContentLinks = function(gwiki) {
-    var links = this.mainContent.getElementsByTagName('a');
-    for (var i = 0; i < links.length; i++) {
-        // If we're instructed not to touch it, don't touch it
-        if (links[i].classList.contains('gwiki-passthrough')) continue;
 
-        // If this is a google drive link, try to load it on this page
-        // TODO: Figure out how to fall back if this is not a page in this hierarchy
-        if (links[i].href.match(/\.google\.com\/.+\/d\/[a-zA-Z0-9._-]+/)) {
-            links[i].addEventListener('click', function(e) {
-                var id = e.target.href.match(/\.google\.com\/.+\/d\/([^\/]+)/);
+// Block the interface with an optional message or sub interface
+GwikiUI.prototype.block = function(str) {
+    var blocker = document.createElement('div');
+    blocker.className = 'blocker';
+    blocker.innerHTML = '<div class="content">'+str+'</div>';
+    this.root.appendChild(blocker);
+    this.blocker = blocker;
+    return blocker;
+}
 
-                // If we can't figure it out, leave it
-                if (!id) return true;
 
-                // Otherwise, redirect it
-                e.preventDefault();
-                gwiki.getItemById(id[1]).then(function(response) {
-                    gwiki.setExtraAttributes(response.result);
-                    gwiki.setCurrentItem(response.result);
-                })
-            });
 
-        // If it's not a google link, make sure it opens outside
-        } else {
-            links[i].target = "_blank";
-        }
+// Unblock the interface
+GwikiUI.prototype.unblock = function() {
+    if (this.blocker) {
+        this.blocker.parentElement.removeChild(this.blocker);
+        this.blocker = null;
     }
 }
 
@@ -221,6 +203,11 @@ GwikiUI.prototype.parseContentLinks = function(gwiki) {
 
 
 
+
+
+
+
+// Subscriptions
 
 GwikiUI.prototype.subscribeListeners = function(gwiki) {
     var t = this;
@@ -252,6 +239,9 @@ GwikiUI.prototype.subscribeListeners = function(gwiki) {
 
 
 
+
+// Utility functions and extras
+
 GwikiUI.prototype.cleanHtml = function(html) {
     var st = html.indexOf('<body>');
     if (st > -1) html = html.substr(st+6);
@@ -262,6 +252,8 @@ GwikiUI.prototype.cleanHtml = function(html) {
     return html;
 }
 
+
+
 GwikiUI.prototype.getEmbedString = function(gwiki) {
     var i = gwiki.currentItem;
     if (i.mimeType == 'application/vnd.google-apps.document') return '<iframe class="google-doc" src="https://docs.google.com/document/d/'+i.id+'/preview">';
@@ -271,6 +263,41 @@ GwikiUI.prototype.getEmbedString = function(gwiki) {
 
 
 
+GwikiUI.prototype.parseMarkdown = function(md) {
+    return this.markdownParser.makeHtml(md);
+}
+
+
+
+GwikiUI.prototype.parseContentLinks = function(gwiki) {
+    var links = this.mainContent.getElementsByTagName('a');
+    for (var i = 0; i < links.length; i++) {
+        // If we're instructed not to touch it, don't touch it
+        if (links[i].classList.contains('gwiki-passthrough')) continue;
+
+        // If this is a google drive link, try to load it on this page
+        // TODO: Figure out how to fall back if this is not a page in this hierarchy
+        if (links[i].href.match(/\.google\.com\/.+\/d\/[a-zA-Z0-9._-]+/)) {
+            links[i].addEventListener('click', function(e) {
+                var id = e.target.href.match(/\.google\.com\/.+\/d\/([^\/]+)/);
+
+                // If we can't figure it out, leave it
+                if (!id) return true;
+
+                // Otherwise, redirect it
+                e.preventDefault();
+                gwiki.getItemById(id[1]).then(function(response) {
+                    gwiki.setExtraAttributes(response.result);
+                    gwiki.setCurrentItem(response.result);
+                })
+            });
+
+        // If it's not a google link, make sure it opens outside
+        } else {
+            links[i].target = "_blank";
+        }
+    }
+}
 
 
 
