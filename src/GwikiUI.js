@@ -71,7 +71,7 @@ GwikiUI.prototype.unblock = function() {
 
 // On first load or when resetting home
 GwikiUI.prototype.askForHome = function(gwiki) {
-    var str = '<form action="?" method="GET" class="homeForm"><label for="homeFolder">Home Folder: <input type="text" id="homeFolder" value="'+(gwiki.home || '')+'" placeholder="e.g., https://drive.google.com/folders/2gja3lkaw3j-faoejsdlkalgalskdga"> <button type="submit">Ok</button></form>';
+    var str = '<form action="?" method="GET" class="homeForm"><label for="homeFolder">'+GwikiUI.strings['prompt-homefolder']+'<input type="text" id="homeFolder" value="'+(gwiki.home || '')+'" placeholder="e.g., https://drive.google.com/folders/2gja3lkaw3j-faoejsdlkalgalskdga"> <button type="submit">Ok</button></form>';
     var blocker = this.block(str);
     blocker.getElementsByTagName('form')[0].addEventListener('submit', function(e) {
         e.preventDefault();
@@ -143,6 +143,7 @@ GwikiUI.prototype.updateStandardInterface = function(gwiki) {
             var str = this.getEmbedString(gwiki);
             this.mainContent.innerHTML = this.getEmbedString(gwiki);
         }
+        this.parseContentLinks(gwiki);
     }
 
 
@@ -177,6 +178,37 @@ GwikiUI.prototype.updateStandardInterface = function(gwiki) {
 
             // If this one is selected, show that
             if (gwiki.currentItem && gwiki.parents[0].children[i].displayName == gwiki.currentItem.displayName) this.subMenu[i].classList.add('selected');
+        }
+    }
+}
+
+
+GwikiUI.prototype.parseContentLinks = function(gwiki) {
+    var links = this.mainContent.getElementsByTagName('a');
+    for (var i = 0; i < links.length; i++) {
+        // If we're instructed not to touch it, don't touch it
+        if (links[i].classList.contains('gwiki-passthrough')) continue;
+
+        // If this is a google drive link, try to load it on this page
+        // TODO: Figure out how to fall back if this is not a page in this hierarchy
+        if (links[i].href.match(/\.google\.com\/.+\/d\/[a-zA-Z0-9._-]+/)) {
+            links[i].addEventListener('click', function(e) {
+                var id = e.target.href.match(/\.google\.com\/.+\/d\/([^\/]+)/);
+
+                // If we can't figure it out, leave it
+                if (!id) return true;
+
+                // Otherwise, redirect it
+                e.preventDefault();
+                gwiki.getItemById(id[1]).then(function(response) {
+                    gwiki.setExtraAttributes(response.result);
+                    gwiki.setCurrentItem(response.result);
+                })
+            });
+
+        // If it's not a google link, make sure it opens outside
+        } else {
+            links[i].target = "_blank";
         }
     }
 }
@@ -234,7 +266,7 @@ GwikiUI.prototype.getEmbedString = function(gwiki) {
     var i = gwiki.currentItem;
     if (i.mimeType == 'application/vnd.google-apps.document') return '<iframe class="google-doc" src="https://docs.google.com/document/d/'+i.id+'/preview">';
     else if (i.mimeType == 'application/vnd.google-apps.spreadsheet') return '<iframe class="google-doc" src="https://docs.google.com/spreadsheets/d/'+i.id+'/preview">';
-    else return Gwiki.strings['err-unknownembedtype'].replace('$type', i.mimeType);
+    else return GwikiUI.strings['err-unknownembedtype'].replace('$type', i.mimeType);
 }
 
 
@@ -248,7 +280,8 @@ GwikiUI.prototype.getEmbedString = function(gwiki) {
 
 GwikiUI.strings = {
     'title' : 'Gwiki',
+    'prompt-homefolder' : 'Home Folder: ',
     'err-nocontent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.',
-    'err-unknownembedtype' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type</p>'
+    'err-unknownembedtype' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type.</p>'
 }
 

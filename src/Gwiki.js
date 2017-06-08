@@ -27,9 +27,17 @@ Gwiki.prototype.init = function() {
 
 Gwiki.prototype.setHome = function(folderId) {
     var t = this;
-    gapi.client.drive.files.get({
-        'fileId' : folderId
-    }).then(function(response) {
+    if (!folderId) {
+        this.home = null;
+        this.currentItem = null;
+        this.parents = [];
+        this.mainMenu = [];
+        this.dispatchEvent('setHome', { gwiki : this });
+        this.persist();
+        return;
+    }
+
+    this.getItemById(folderId).then(function(response) {
         t.home = response.result;
         t.setExtraAttributes(t.home);
         t.getChildren(folderId).then(function(response) {
@@ -195,6 +203,13 @@ Gwiki.prototype.setCurrentItem = function(item) {
 }
 
 
+Gwiki.prototype.getItemById = function(id) {
+    return gapi.client.drive.files.get({
+        'fileId' : id
+    });
+}
+
+
 Gwiki.prototype.getChildren = function(folderId) {
     return gapi.client.drive.files.list({
         'q' : "'"+folderId+"' in parents and trashed = false",
@@ -275,6 +290,7 @@ Gwiki.consumableTypes = [
     'application/vnd.google-apps.folder',
     'application/vnd.google-apps.document',
     'text/x-markdown',
-    'text/markdown'
+    'text/markdown',
+    'text/plain'
 ];
 
