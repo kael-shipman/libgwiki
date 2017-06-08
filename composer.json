@@ -16,11 +16,5 @@
         "stackexchange/pagedown": "~1.1"
     },
     "require-dev" : {
-    },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url" : "https://github.com/kael-shipman/pagedown"
-        }
-    ]
+    }
 }

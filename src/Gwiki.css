@@ -95,7 +95,7 @@
     padding: 20px 10px 20px 20px;
     flex: 2;
     min-width: 250px;
-    height: 100%;
+    height: calc(100% - 40px);
     overflow-y: auto;
 }
 
@@ -114,7 +114,7 @@
 }
 
 .gwiki-ui .gwiki-main-content {
-    height: 100%;
+    height: calc(100% - 40px);
     overflow-y: auto;
     flex: 5;
     padding: 20px 20px 20px 10px;
