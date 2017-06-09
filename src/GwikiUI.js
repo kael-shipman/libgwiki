@@ -327,16 +327,19 @@ GwikiUI.prototype.parseContentLinks = function() {
 
         // If this is a google drive link, try to load it on this page
         // TODO: Figure out how to fall back if this is not a page in this hierarchy
-        if (links[i].href.match(/\.google\.com\/.+\/d\/[a-zA-Z0-9._-]+/)) {
+        if (links[i].href.match(/\.google\.com\/.+\/(d|folders)\/[a-zA-Z0-9._-]+/)) {
             links[i].addEventListener('click', function(e) {
-                var id = e.target.href.match(/\.google\.com\/.+\/d\/([^\/]+)/);
+                var id = e.target.href.match(/\.google\.com\/.+\/(d|folders)\/([a-zA-Z0-9._-]+)/);
 
                 // If we can't figure it out, leave it
-                if (!id) return true;
+                if (!id) {
+                    e.target.target = '_blank';
+                    return true;
+                }
 
                 // Otherwise, redirect it
                 e.preventDefault();
-                t.gwiki.getItemById(id[1]).then(function(response) {
+                t.gwiki.getItemById(id[2]).then(function(response) {
                     t.gwiki.setExtraAttributes(response.result);
                     t.gwiki.setCurrentItem(response.result);
                 })
