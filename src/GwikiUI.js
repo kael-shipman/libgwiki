@@ -18,7 +18,7 @@ GwikiUI = function(opts) {
     this.siteTitle.className = 'gwiki-site-title';
     this.siteTitle.addEventListener('click', function(e) {
         e.preventDefault();
-        t.go(e.target.gobject);
+        t.gwiki.setCurrentItem(e.target.gobject);
     });
 
     // Main navigation
