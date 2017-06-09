@@ -1,4 +1,5 @@
 GwikiUI = function(opts) {
+    var t = this;
     Utils.merge(this, {}, opts || {});
 
     // Sanity Check
@@ -15,6 +16,10 @@ GwikiUI = function(opts) {
     this.header.appendChild(document.createElement('h1'));
     this.siteTitle = this.header.lastChild;
     this.siteTitle.className = 'gwiki-site-title';
+    this.siteTitle.addEventListener('click', function(e) {
+        e.preventDefault();
+        t.go(e.target.gobject);
+    });
 
     // Main navigation
     this.header.appendChild(document.createElement('nav'));
@@ -73,13 +78,12 @@ GwikiUI.interface = ['block','askForHome','drawStandardInterface'];
 // Interface Functions
 
 GwikiUI.prototype.init = function() {
-    if (this.gwiki.home === null) this.askForHome();
-    else {
-        this.loadStandardInterface();
-        this.updateStandardInterface();
-    }
     this.initialized = true;
+    if (this.gwiki.home === null) this.askForHome();
+    else this.rebuildFrame();
 }
+
+
 
 // On first load or when resetting home
 GwikiUI.prototype.askForHome = function() {
@@ -94,29 +98,25 @@ GwikiUI.prototype.askForHome = function() {
         var match = folderId.match(/[^a-zA-Z0-9_-]/);
         if (match) folderId = folderId.substr(0, match.index);
 
+        t.loading(true);
         t.gwiki.setHome(folderId);
     });
 }
 
 
 
-// Load the interface on init and when home changes
-GwikiUI.prototype.loadStandardInterface = function() {
+// Rebuild essential elements of frame
+GwikiUI.prototype.rebuildFrame = function() {
     var t = this;
 
     // Title
     document.title = this.gwiki.home.displayName;
     this.siteTitle.innerHTML = this.gwiki.home.displayName;
-    this.siteTitle.addEventListener('click', function(e) {
-        e.preventDefault();
-        this.gwiki.setCurrentItem(this.gwiki.home);
-    });
+    this.siteTitle.gobject = this.gwiki.home;
 
 
     // Main Nav
-    for (var i = 0; i < this.mainMenu.length; i++) { 
-        this.mainMenuContainer.removeChild(this.mainMenu[i]);
-    }
+    this.mainMenuContainer.innerHTML = '';
     this.mainMenu = [];
 
     for (var i = 0; i < this.gwiki.mainMenu.length; i++) {
@@ -137,15 +137,16 @@ GwikiUI.prototype.loadStandardInterface = function() {
 
 
 
-// Update the interfaces (usually in response to the user selecting an item)
-GwikiUI.prototype.updateStandardInterface = function(gwiki) {
+// Rebuild the interface elements pertaining to "item"
+GwikiUI.prototype.rebuildItemInterface = function() {
     var t = this;
 
     // If there's no current item selected, reset interface
     if (!this.gwiki.currentItem) {
         this.mainContent.innerHTML = GwikiUI.strings['errNoContent'].replace('$id', this.gwiki.parents[0].id);
+
+    // Otherwise, set content
     } else {
-        // Set content
         if (this.gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.parseMarkdown(this.gwiki.currentItem.body);
         else if (this.gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = this.cleanHtml(this.gwiki.currentItem.body);
         else {
@@ -243,52 +244,39 @@ GwikiUI.prototype.subscribeGwikiListeners = function(gwiki) {
     gwiki.addEventListener('error', function(e) { t.block(e.message); });
     gwiki.addEventListener('init', function(e) {
         t.gwiki = e.target;
-        if (t.ready && !t.initialized) t.init();
+        if (!t.initialized && t.ready) t.init();
     });
-    gwiki.addEventListener('setHome', function(e) {
-        if (e.target.home === null) t.askForHome(e.target);
-        else {
-            t.loadStandardInterface(e.target);
-            t.unblock();
-        }
-    });
-    gwiki.addEventListener('setCurrentItem', function(e) {
-        t.updateStandardInterface(e.target);
-    });
+    gwiki.addEventListener('setHome', function(e) { t.init(); t.loading(false); });
+    gwiki.addEventListener('setCurrentItem', function(e) { t.rebuildItemInterface(); t.loading(false); });
 }
 
 GwikiUI.prototype.subscribeGwikiBridgeListeners = function(bridge) {
     var t = this;
     if (!Utils.implements(GwikiBridge.interface, bridge)) throw "You must provide an instance of GwikiBridge as the argument to this function.";
 
-    // Used below to allow user to sign in
-    var loadSigninButton = function() {
-        if (!t.blocker) return;
-        var btn = t.blocker.getElementsByClassName('g-signin');
-        if (btn.length == 0) return;
-        btn = btn[0];
-        btn.addEventListener('click', function(e) { t.loading(true); bridge.signin(); });
-    }
-
     bridge.addEventListener('error', function(e) { t.block(e.message); });
-    bridge.addEventListener('init', function(e) {
-        if (!e.target.signedIn) {
-            t.block(GwikiUI.strings.displayTitle + GwikiUI.strings.tagline + GwikiUI.strings.signinButton);
-            loadSigninButton();
-        } else {
-            t.ready = true;
-            if (!t.initialized && t.gwiki) t.init();
-        }
-    });
     bridge.addEventListener('signinStatusChanged', function(e) {
         if (e.target.signedIn) {
             t.ready = true;
             t.unblock();
-            if (!t.initialized && t.gwiki) t.init();
+            if (t.gwiki) {
+                if (!t.initialized) {
+                    t.init();
+                    if (t.gwiki.currentItem) t.rebuildItemInterface();
+                    else if (t.gwiki.home) t.gwiki.setCurrentItem(t.gwiki.home);
+                }
+            } else {
+                t.loading(true);
+            }
         } else {
             t.ready = false;
-            t.block(GwikiUI.strings.displayTitle + GwikiUI.strings.signedOut + GwikiUI.strings.signinButton);
-            loadSigninButton();
+            t.block(GwikiUI.strings.displayTitle + GwikiUI.strings.tagline + GwikiUI.strings.signinButton);
+            
+            // Load signin button
+            var btn = t.blocker.getElementsByClassName('g-signin');
+            if (btn.length == 0) return;
+            btn = btn[0];
+            btn.addEventListener('click', function(e) { t.loading(true); bridge.signin(); });
         }
     });
 }

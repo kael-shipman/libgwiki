@@ -43,6 +43,7 @@
     });
 
     // Hook everything up through events
+    window.gwikiBridge.addEventListener('signinStatusChanged', function(e) { if (e.target.signedIn) gwiki.setHome('0BwZTf0F3YjSmcDN3TXRMc0lUeTQ'); });
     window.gwikiUI.subscribeGwikiListeners(window.gwiki);
     window.gwikiUI.subscribeGwikiBridgeListeners(window.gwikiBridge);
     window.gwikiBridge.addEventListener('init', function(e) { window.gwiki.init(e.target); });

@@ -49,6 +49,7 @@ GwikiBridge.prototype.init = function(clientId, discoveryDocs, scope, apikey) {
         });
         t.signedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
         t.dispatchEvent('init');
+        t.dispatchEvent('signinStatusChanged');
     });
 }
 
