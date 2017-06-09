@@ -1,4 +1,5 @@
 var YOUR_CLIENT_ID = 'your id here';
 var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+var YOUR_API_KEY = 'your key here';
 

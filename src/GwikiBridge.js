@@ -16,7 +16,7 @@ GwikiBridge.interface = [ 'init', 'signin' ];
 Utils.makeObservable(GwikiBridge);
 
 
-GwikiBridge.prototype.init = function(clientId, discoveryDocs, scope) {
+GwikiBridge.prototype.init = function(clientId, discoveryDocs, scope, apikey) {
     var t = this;
 
     // Make sure we've got gapi
@@ -36,6 +36,7 @@ GwikiBridge.prototype.init = function(clientId, discoveryDocs, scope) {
 
 
     // Initialize the google api
+    if (apikey) gapi.client.setApiKey(apikey);
     gapi.client.init({
         clientId: clientId,
         discoveryDocs: discoveryDocs,
