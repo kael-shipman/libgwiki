@@ -16,50 +16,10 @@
     <script type="text/javascript" src="/assets/Utils.js"></script>
     <script type="text/javascript" src="/assets/Gwiki.js"></script>
     <script type="text/javascript" src="/assets/GwikiUI.js"></script>
+    <script type="text/javascript" src="/assets/GwikiBridge.js"></script>
 
-    <!-- Now initialize everything -->
-    <script type="text/javascript">
-        // This gets called when google's done loading it's api
-        function init() {
-            // Add a consumable type (example)
-            // This would make Gwiki show google Drawings in your menus
-            //Gwiki.consumableTypes.push('application/vnd.google-apps.drawing');
-
-            // Create an instance of GwikiUI
-            var ui = new GwikiUI({
-                root : document.getElementsByClassName('gwiki-ui')[0],
-                markdownParser: new Markdown.Converter()
-            });
-
-            // Initialize the google api
-            gapi.client.init({
-                discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-                clientId: 'YOUR_CLIENT_ID',
-                scope: 'https://www.googleapis.com/auth/drive.readonly'
-            }).then(function () {
-                // Instantiate Gwiki
-                window.gwiki = new Gwiki();
-
-                // Make GwikiUI listen for Gwiki's events
-                ui.subscribeListeners(window.gwiki);
-
-                // Setup a callback function that makes the user sign into google an initializes the gwiki, if necessary
-                var manageSignin = function (signedIn) {
-                    if (signedIn) {
-                        if (!window.gwiki.initialized) gwiki.init();
-                    } else {
-                        gapi.auth2.getAuthInstance().signIn();
-                    }
-                }
-
-                // Set up a loop that makes sure the user stays signed in
-                gapi.auth2.getAuthInstance().isSignedIn.listen(manageSignin);
-
-                // Start it up by manually starting the signin loop
-                manageSignin(gapi.auth2.getAuthInstance().isSignedIn.get());
-            });
-        }
-    </script>
+    <!-- Local config (this is where YOUR_CLIENT_ID is set) -->
+    <script type="text/javascript" src="/assets/config.local.js"></script>
 </head>
 <body>
 
@@ -67,9 +27,30 @@
 <div class="gwiki-ui">
 </div>
 
+<!-- Now initialize everything -->
+<script type="text/javascript">
+    // This is where you can customize.
+    // You might add more consumable types using `Gwiki.consumableTypes.push('my/mime.type')`,
+    // or you might change some of the interface strings by overriding keys in `GwikiUi.strings`
+
+
+    // Instantiate Gwiki workers (attach to window for easy debugging and playing)
+    window.gwikiBridge = new GwikiBridge();
+    window.gwiki = new Gwiki();
+    window.gwikiUI = new GwikiUI({
+        root : document.getElementsByClassName('gwiki-ui')[0],
+        markdownParser: new Markdown.Converter()
+    });
+
+    // Hook everything up through events
+    window.gwikiUI.subscribeGwikiListeners(window.gwiki);
+    window.gwikiUI.subscribeGwikiBridgeListeners(window.gwikiBridge);
+    window.gwikiBridge.addEventListener('init', function(e) { window.gwiki.init(e.target); });
+</script>
+
 <!-- Load google's api -->
 <script async defer src="https://apis.google.com/js/api.js"
-    onload="this.onload=function(){};gapi.load('client:auth2', init);"
+    onload="this.onload=function(){};gapi.load('client:auth2', function() { window.gwikiBridge.init(YOUR_CLIENT_ID, DISCOVERY_DOCS, SCOPE) });"
     onreadystatechange="if (this.readyState === 'complete') this.onload()">
 </script>
 </body>

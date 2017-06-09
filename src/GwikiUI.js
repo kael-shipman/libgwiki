@@ -43,6 +43,10 @@ GwikiUI = function(opts) {
     this.root.appendChild(document.createElement('footer'));
     this.footer = this.root.lastChild;
     this.footer.className = 'gwiki-footer';
+
+
+    // After the interface is built, block until GwikiBridge is initialized
+    this.loading(true);
 }
 
 GwikiUI.prototype = Object.create(Object.prototype);
@@ -68,9 +72,19 @@ GwikiUI.interface = ['block','askForHome','drawStandardInterface'];
 
 // Interface Functions
 
+GwikiUI.prototype.init = function() {
+    if (this.gwiki.home === null) this.askForHome();
+    else {
+        this.loadStandardInterface();
+        this.updateStandardInterface();
+    }
+    this.initialized = true;
+}
+
 // On first load or when resetting home
-GwikiUI.prototype.askForHome = function(gwiki) {
-    var str = '<form action="?" method="GET" class="homeForm"><label for="homeFolder">'+GwikiUI.strings['prompt-homefolder']+'<input type="text" id="homeFolder" value="'+(gwiki.home || '')+'" placeholder="e.g., https://drive.google.com/folders/2gja3lkaw3j-faoejsdlkalgalskdga"> <button type="submit">Ok</button></form>';
+GwikiUI.prototype.askForHome = function() {
+    var t = this;
+    var str = '<form action="?" method="GET" class="homeForm"><label for="homeFolder">'+GwikiUI.strings['prompt-homefolder']+'<input type="text" id="homeFolder" value="'+(this.gwiki.home || '')+'" placeholder="e.g., https://drive.google.com/folders/2gja3lkaw3j-faoejsdlkalgalskdga"> <button type="submit">Ok</button></form>';
     var blocker = this.block(str);
     blocker.getElementsByTagName('form')[0].addEventListener('submit', function(e) {
         e.preventDefault();
@@ -80,20 +94,22 @@ GwikiUI.prototype.askForHome = function(gwiki) {
         var match = folderId.match(/[^a-zA-Z0-9_-]/);
         if (match) folderId = folderId.substr(0, match.index);
 
-        gwiki.setHome(folderId);
+        t.gwiki.setHome(folderId);
     });
 }
 
 
 
 // Load the interface on init and when home changes
-GwikiUI.prototype.loadStandardInterface = function(gwiki) {
+GwikiUI.prototype.loadStandardInterface = function() {
+    var t = this;
+
     // Title
-    document.title = gwiki.home.displayName;
-    this.siteTitle.innerHTML = gwiki.home.displayName;
+    document.title = this.gwiki.home.displayName;
+    this.siteTitle.innerHTML = this.gwiki.home.displayName;
     this.siteTitle.addEventListener('click', function(e) {
         e.preventDefault();
-        gwiki.setCurrentItem(gwiki.home);
+        this.gwiki.setCurrentItem(this.gwiki.home);
     });
 
 
@@ -103,18 +119,18 @@ GwikiUI.prototype.loadStandardInterface = function(gwiki) {
     }
     this.mainMenu = [];
 
-    for (var i = 0; i < gwiki.mainMenu.length; i++) {
+    for (var i = 0; i < this.gwiki.mainMenu.length; i++) {
         this.mainMenu[i] = document.createElement('a');
-        this.mainMenu[i].href = "#"+gwiki.mainMenu[i].id;
-        this.mainMenu[i].innerHTML = gwiki.mainMenu[i].displayName;
-        this.mainMenu[i].setAttribute('data-gid', gwiki.mainMenu[i].id);
-        this.mainMenu[i].gobject = gwiki.mainMenu[i];
+        this.mainMenu[i].href = "#"+this.gwiki.mainMenu[i].id;
+        this.mainMenu[i].innerHTML = this.gwiki.mainMenu[i].displayName;
+        this.mainMenu[i].setAttribute('data-gid', this.gwiki.mainMenu[i].id);
+        this.mainMenu[i].gobject = this.gwiki.mainMenu[i];
         this.mainMenuContainer.appendChild(this.mainMenu[i]);
 
         // Click listener
         this.mainMenu[i].addEventListener('click', function(e) {
             e.preventDefault();
-            gwiki.setCurrentItem(e.target.gobject);
+            t.gwiki.setCurrentItem(e.target.gobject);
         });
     }
 }
@@ -123,23 +139,25 @@ GwikiUI.prototype.loadStandardInterface = function(gwiki) {
 
 // Update the interfaces (usually in response to the user selecting an item)
 GwikiUI.prototype.updateStandardInterface = function(gwiki) {
+    var t = this;
+
     // If there's no current item selected, reset interface
-    if (!gwiki.currentItem) {
-        this.mainContent.innerHTML = GwikiUI.strings['err-nocontent'].replace('$id', gwiki.parents[0].id);
+    if (!this.gwiki.currentItem) {
+        this.mainContent.innerHTML = GwikiUI.strings['errNoContent'].replace('$id', this.gwiki.parents[0].id);
     } else {
         // Set content
-        if (gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.parseMarkdown(gwiki.currentItem.body);
-        else if (gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = this.cleanHtml(gwiki.currentItem.body);
+        if (this.gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.parseMarkdown(this.gwiki.currentItem.body);
+        else if (this.gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = this.cleanHtml(this.gwiki.currentItem.body);
         else {
-            var str = this.getEmbedString(gwiki);
-            this.mainContent.innerHTML = this.getEmbedString(gwiki);
+            var str = this.getEmbedString();
+            this.mainContent.innerHTML = this.getEmbedString();
         }
-        this.parseContentLinks(gwiki);
+        this.parseContentLinks();
     }
 
 
     // Select main menu item
-    var selectedMainItem = gwiki.parents[gwiki.parents.length-2];
+    var selectedMainItem = this.gwiki.parents[this.gwiki.parents.length-2];
     for (var i = 0; i < this.mainMenu.length; i++) {
         if (selectedMainItem && this.mainMenu[i].gobject.name == selectedMainItem.name) this.mainMenu[i].classList.add('selected');
         else this.mainMenu[i].classList.remove('selected');
@@ -149,26 +167,26 @@ GwikiUI.prototype.updateStandardInterface = function(gwiki) {
     // Create sub menu
     this.subMenu = [];
     this.subMenuContainer.innerHTML = '';
-    if (gwiki.parents.length > 1) {
-        for (var i = 0; i < gwiki.parents[0].children.length; i++) {
+    if (this.gwiki.parents.length > 1) {
+        for (var i = 0; i < this.gwiki.parents[0].children.length; i++) {
             this.subMenu[i] = document.createElement('a');
-            this.subMenu[i].href = "#"+gwiki.parents[0].children[i].id;
-            this.subMenu[i].innerHTML = gwiki.parents[0].children[i].displayName;
-            this.subMenu[i].setAttribute('data-gid', gwiki.parents[0].children[i].id);
-            this.subMenu[i].gobject = gwiki.parents[0].children[i];
+            this.subMenu[i].href = "#"+this.gwiki.parents[0].children[i].id;
+            this.subMenu[i].innerHTML = this.gwiki.parents[0].children[i].displayName;
+            this.subMenu[i].setAttribute('data-gid', this.gwiki.parents[0].children[i].id);
+            this.subMenu[i].gobject = this.gwiki.parents[0].children[i];
             this.subMenuContainer.appendChild(this.subMenu[i]);
 
             // Click listener
             this.subMenu[i].addEventListener('click', function(e) {
                 e.preventDefault();
-                gwiki.setCurrentItem(e.target.gobject);
+                t.gwiki.setCurrentItem(e.target.gobject);
             });
 
             // If this looks like the group header, make it stand out
-            if (gwiki.parents[0].displayName == gwiki.parents[0].children[i].displayName) this.subMenu[i].classList.add('gwiki-group-header');
+            if (this.gwiki.parents[0].displayName == this.gwiki.parents[0].children[i].displayName) this.subMenu[i].classList.add('gwiki-group-header');
 
             // If this one is selected, show that
-            if (gwiki.currentItem && gwiki.parents[0].children[i].displayName == gwiki.currentItem.displayName) this.subMenu[i].classList.add('selected');
+            if (this.gwiki.currentItem && this.gwiki.parents[0].children[i].displayName == this.gwiki.currentItem.displayName) this.subMenu[i].classList.add('selected');
         }
     }
 }
@@ -177,12 +195,14 @@ GwikiUI.prototype.updateStandardInterface = function(gwiki) {
 
 // Block the interface with an optional message or sub interface
 GwikiUI.prototype.block = function(str) {
-    var blocker = document.createElement('div');
-    blocker.className = 'blocker';
-    blocker.innerHTML = '<div class="content">'+str+'</div>';
-    this.root.appendChild(blocker);
-    this.blocker = blocker;
-    return blocker;
+    if (!this.blocker) {
+        this.blocker = document.createElement('div');
+        this.blocker.className = 'blocker';
+        this.root.appendChild(this.blocker);
+    }
+
+    this.blocker.innerHTML = '<div class="content">'+str+'</div>';
+    return this.blocker;
 }
 
 
@@ -193,6 +213,14 @@ GwikiUI.prototype.unblock = function() {
         this.blocker.parentElement.removeChild(this.blocker);
         this.blocker = null;
     }
+}
+
+
+
+// Loading
+GwikiUI.prototype.loading = function(loading) {
+    if (loading) this.block(GwikiUI.strings.displayTitle + GwikiUI.strings.tagline + GwikiUI.strings.loading);
+    else this.unblock();
 }
 
 
@@ -209,26 +237,59 @@ GwikiUI.prototype.unblock = function() {
 
 // Subscriptions
 
-GwikiUI.prototype.subscribeListeners = function(gwiki) {
+GwikiUI.prototype.subscribeGwikiListeners = function(gwiki) {
     var t = this;
     if (!Utils.implements(Gwiki.interface, gwiki)) throw "You must provide an instance of Gwiki as the argument to this function.";
     gwiki.addEventListener('error', function(e) { t.block(e.message); });
     gwiki.addEventListener('init', function(e) {
-        if (e.gwiki.home === null) t.askForHome(e.gwiki);
-        else {
-            t.loadStandardInterface(e.gwiki);
-            t.updateStandardInterface(e.gwiki);
-        }
+        t.gwiki = e.target;
+        if (t.ready && !t.initialized) t.init();
     });
     gwiki.addEventListener('setHome', function(e) {
-        if (e.gwiki.home === null) t.askForHome(e.gwiki);
+        if (e.target.home === null) t.askForHome(e.target);
         else {
-            t.loadStandardInterface(e.gwiki);
+            t.loadStandardInterface(e.target);
             t.unblock();
         }
     });
     gwiki.addEventListener('setCurrentItem', function(e) {
-        t.updateStandardInterface(e.gwiki);
+        t.updateStandardInterface(e.target);
+    });
+}
+
+GwikiUI.prototype.subscribeGwikiBridgeListeners = function(bridge) {
+    var t = this;
+    if (!Utils.implements(GwikiBridge.interface, bridge)) throw "You must provide an instance of GwikiBridge as the argument to this function.";
+
+    // Used below to allow user to sign in
+    var loadSigninButton = function() {
+        if (!t.blocker) return;
+        var btn = t.blocker.getElementsByClassName('g-signin');
+        if (btn.length == 0) return;
+        btn = btn[0];
+        btn.addEventListener('click', function(e) { t.loading(true); bridge.signin(); });
+    }
+
+    bridge.addEventListener('error', function(e) { t.block(e.message); });
+    bridge.addEventListener('init', function(e) {
+        if (!e.target.signedIn) {
+            t.block(GwikiUI.strings.displayTitle + GwikiUI.strings.tagline + GwikiUI.strings.signinButton);
+            loadSigninButton();
+        } else {
+            t.ready = true;
+            if (!t.initialized && t.gwiki) t.init();
+        }
+    });
+    bridge.addEventListener('signinStatusChanged', function(e) {
+        if (e.target.signedIn) {
+            t.ready = true;
+            t.unblock();
+            if (!t.initialized && t.gwiki) t.init();
+        } else {
+            t.ready = false;
+            t.block(GwikiUI.strings.displayTitle + GwikiUI.strings.signedOut + GwikiUI.strings.signinButton);
+            loadSigninButton();
+        }
     });
 }
 
@@ -254,11 +315,11 @@ GwikiUI.prototype.cleanHtml = function(html) {
 
 
 
-GwikiUI.prototype.getEmbedString = function(gwiki) {
-    var i = gwiki.currentItem;
+GwikiUI.prototype.getEmbedString = function() {
+    var i = this.gwiki.currentItem;
     if (i.mimeType == 'application/vnd.google-apps.document') return '<iframe class="google-doc" src="https://docs.google.com/document/d/'+i.id+'/preview">';
     else if (i.mimeType == 'application/vnd.google-apps.spreadsheet') return '<iframe class="google-doc" src="https://docs.google.com/spreadsheets/d/'+i.id+'/preview">';
-    else return GwikiUI.strings['err-unknownembedtype'].replace('$type', i.mimeType);
+    else return GwikiUI.strings['errUnknownEmbedType'].replace('$type', i.mimeType);
 }
 
 
@@ -269,7 +330,8 @@ GwikiUI.prototype.parseMarkdown = function(md) {
 
 
 
-GwikiUI.prototype.parseContentLinks = function(gwiki) {
+GwikiUI.prototype.parseContentLinks = function() {
+    var t = this;
     var links = this.mainContent.getElementsByTagName('a');
     for (var i = 0; i < links.length; i++) {
         // If we're instructed not to touch it, don't touch it
@@ -286,9 +348,9 @@ GwikiUI.prototype.parseContentLinks = function(gwiki) {
 
                 // Otherwise, redirect it
                 e.preventDefault();
-                gwiki.getItemById(id[1]).then(function(response) {
-                    gwiki.setExtraAttributes(response.result);
-                    gwiki.setCurrentItem(response.result);
+                t.gwiki.getItemById(id[1]).then(function(response) {
+                    t.gwiki.setExtraAttributes(response.result);
+                    t.gwiki.setCurrentItem(response.result);
                 })
             });
 
@@ -307,8 +369,14 @@ GwikiUI.prototype.parseContentLinks = function(gwiki) {
 
 GwikiUI.strings = {
     'title' : 'Gwiki',
+    'displayTitle' : '<h1>Gwiki</h1>',
+    'tagline' : '<p>A wiki interface for Google Drive</p>',
+    'loading' : '<p>Loading...</p>',
+    'signinButton' : '<p><img class="g-signin" src="/assets/imgs/btn_google_signin_dark_normal_web.png"></p>',
+    'signedOut' : '<p>You were signed out! Please sign in again.</p>',
     'prompt-homefolder' : 'Home Folder: ',
-    'err-nocontent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.',
-    'err-unknownembedtype' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type.</p>'
+
+    'errNoContent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.',
+    'errUnknownEmbedType' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type.</p>'
 }
 

@@ -14,10 +14,15 @@ Gwiki.prototype = Object.create(Object.prototype);
 Gwiki.interface = ['init', 'setHome','persist', 'menuize', 'setExtraAttributes', 'setCurrentItem', 'getItemById', 'getChildren', 'addEventListener', 'removeEventListener', 'dispatchEvent' ];
 
 
+// Add observable characteristics
+Utils.makeObservable(Gwiki);
 
-Gwiki.prototype.init = function() {
+
+Gwiki.prototype.init = function(bridge) {
+    this.bridge = bridge;
+
     // Sanity checks on init
-    if (typeof gapi == 'undefined') throw "This library requires a valid gapi instance. Please see https://developers.google.com/drive/v3/web/quickstart/js for information on initializing the gapi javascript client.";
+    if (!Utils.implements(GwikiBridge.interface, this.bridge)) throw "This library requires a valid Bridge instance. Usually you pass this into the `Gwiki::init` function (this function) through the `GwikiBridge` 'init' event listener. E.g., `gwikiBridge.addEventListener('init', function(e) { gwiki.init(e.target) })`";
 
     // Restore previous state, if any
     if (this.persistence && typeof Storage != 'undefined' && typeof localStorage.gwikiState != 'undefined') {
@@ -256,62 +261,6 @@ Gwiki.prototype.setExtraAttributes = function(item) {
     if (suffix) displayName = displayName.substr(0, (displayName.length - suffix[0].length));
     item.displayName = displayName;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Event handling
-
-Gwiki.prototype.addEventListener = function(eventName, callback) {
-    if (typeof this.eventListeners == 'undefined') this.eventListeners = {};
-    if (typeof this.eventListeners[eventName] == 'undefined') this.eventListeners[eventName] = [];
-    this.eventListeners[eventName].push(callback);
-}
-
-Gwiki.prototype.removeEventListener = function(eventName, callback) {
-    if (typeof this.eventListeners == 'undefined') this.eventListeners = {};
-    if (typeof this.eventListeners[eventName] == 'undefined') return true;
-
-    for(var i = 0; i < this.eventListeners[eventName].length; i++) {
-        if (this.eventListeners[eventName][i] === callback) {
-            this.eventListeners[eventName].splice(i, 1);
-            break;
-        }
-    }
-    return true;
-}
-
-Gwiki.prototype.dispatchEvent = function(eventName, props) {
-    if (typeof this.eventListeners == 'undefined') this.eventListeners = {};
-    if (typeof this.eventListeners[eventName] == 'undefined') return true;
-
-    var e = { gwiki : this };
-    Utils.merge(e, props || {});
-
-    var stopPropagation = false;
-    var preventDefault = false;
-    e.stopPropagation = function() { stopPropagation = true; }
-    e.preventDefault = function() { preventDefault = true; }
-
-
-    for(var i = 0; i < this.eventListeners[eventName].length; i++) {
-        this.eventListeners[eventName][i].call(window, e);
-        if (stopPropagation) break;
-    }
-    
-    return !preventDefault;
-}
-
-
 
 
 
