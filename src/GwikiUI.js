@@ -313,6 +313,10 @@ GwikiUI.prototype.getEmbedString = function() {
 
 
 GwikiUI.prototype.parseMarkdown = function(md) {
+    if (!(this.markdownParser instanceof Markdown.Converter)) {
+        if (typeof this.markdownParser == 'function') this.markdownParser.call(this);
+        else throw "this.markdownParser must be either an instance of Markdown.Converter or a container function that yields a Markdown.Converter";
+    }
     return this.markdownParser.makeHtml(md);
 }
 

@@ -13,7 +13,8 @@
         }
     ],
     "require" : {
-        "stackexchange/pagedown": "~1.1"
+        "stackexchange/pagedown": "~1.1",
+        "jmcmanus/pagedown-extra": "~0.1"
     },
     "require-dev" : {
     }
