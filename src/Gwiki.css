@@ -133,6 +133,80 @@
 
 /* Markdown formatting */
 
+/* Baseline Styles copied from github */
+
+.gwiki-ui .gwiki-main-content table {
+    display: block;
+    width: 100%;
+    overflow: auto;
+}
+
+.gwiki-ui .gwiki-main-content table tr {
+    background-color: #fff;
+    border-top: 1px solid #c6cbd1;
+}
+
+.gwiki-ui .gwiki-main-content table tr:nth-child(2n) {
+	background-color: #f6f8fa;
+}
+
+.gwiki-ui .gwiki-main-content table th {
+    font-weight: 600;
+}
+
+.gwiki-ui .gwiki-main-content table th,
+.gwiki-ui .gwiki-main-content table td {
+    padding: 6px 13px;
+    border: 1px solid #dfe2e5;
+}
+
+.gwiki-ui .gwiki-main-content tt,
+.gwiki-ui .gwiki-main-content code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    padding: 0;
+    padding-top: 0.2em;
+    padding-bottom: 0.2em;
+    margin: 0;
+    font-size: 85%;
+    background-color: #f6f8fa;
+    border-radius: 3px;
+}
+
+.gwiki-ui .gwiki-main-content pre {
+    padding: 16px;
+    overflow: auto;
+    font-size: 85%;
+    line-height: 1.45;
+    background-color: #f6f8fa;
+    border-radius: 3px;
+	word-wrap: normal;
+}
+
+.gwiki-ui .gwiki-main-content pre>code {
+    padding: 0;
+    margin: 0;
+    font-size: 100%;
+    word-break: normal;
+    white-space: pre;
+    background: transparent;
+    border: 0;
+}
+
+.gwiki-ui .gwiki-main-content pre code {
+	display: inline;
+    max-width: auto;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    line-height: inherit;
+    word-wrap: normal;
+    background-color: transparent;
+    border: 0;
+}
+
+
+
+/* Gwiki extensions */
 
 .gwiki-ui .gwiki-main-content h1:first-of-type { margin-top: 0; }
 .gwiki-ui .gwiki-main-content h1 { font-size: 2.7rem; font-weight: 400; text-decoration: underline; }
@@ -142,11 +216,11 @@
 .gwiki-ui .gwiki-main-content h5 { font-size: 1.3rem; }
 .gwiki-ui .gwiki-main-content h6 { font-size: 1.1rem; }
 
-
 .gwiki-ui .gwiki-main-content code {
-    background-color: #e5e5e5;
     padding: 1px 6px;
-    border-radius: 2px;
+}
+.gwiki-ui .gwiki-main-content pre code {
+    padding: 0;
 }
 
 .gwiki-ui .gwiki-main-content blockquote {
@@ -166,7 +240,7 @@
 }
 
 .gwiki-ui .gwiki-main-content img {
-    width: 98%;
+    max-width: 98%;
 }
 
 
