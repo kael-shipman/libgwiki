@@ -4,14 +4,13 @@ Gwiki = function(opts) {
         parents : [],
         currentItem : null,
         mainMenu : [],
-        persistence : true
     }, opts || {});
 }
 
 
 
 Gwiki.prototype = Object.create(Object.prototype);
-Gwiki.interface = ['init', 'setHome','persist', 'menuize', 'setExtraAttributes', 'setCurrentItem', 'getItemById', 'getChildren', 'addEventListener', 'removeEventListener', 'dispatchEvent' ];
+Gwiki.interface = ['init', 'setHome','menuize', 'setExtraAttributes', 'setCurrentItem', 'getItemById', 'getChildren', 'addEventListener', 'removeEventListener', 'dispatchEvent' ];
 
 
 // Add observable characteristics
@@ -22,13 +21,7 @@ Gwiki.prototype.init = function(bridge) {
     this.bridge = bridge;
 
     // Sanity checks on init
-    if (!Utils.implements(GwikiBridge.interface, this.bridge)) throw "This library requires a valid Bridge instance. Usually you pass this into the `Gwiki::init` function (this function) through the `GwikiBridge` 'init' event listener. E.g., `gwikiBridge.addEventListener('init', function(e) { gwiki.init(e.target) })`";
-
-    // Restore previous state, if any
-    if (this.persistence && typeof Storage != 'undefined' && typeof localStorage.gwikiState != 'undefined') {
-        var state = JSON.parse(localStorage.gwikiState);
-        for (var x in state) this[x] = state[x];
-    }
+    if (!Utils.implements(GwikiBridge.interface, this.bridge)) throw "This library requires a valid Bridge instance. Usually you pass this into the `Gwiki::init` function (this function) when `GwikiUI` is initialized.";
 
     this.initialized = true;
     this.dispatchEvent('init');
@@ -44,7 +37,6 @@ Gwiki.prototype.setHome = function(folderId) {
         this.parents = [];
         this.mainMenu = [];
         this.dispatchEvent('setHome');
-        this.persist();
         return;
     }
 
@@ -81,7 +73,6 @@ Gwiki.prototype.setCurrentItem = function(item) {
     // Set currentItem to null and fall out
     if (!item) {
         this.currentItem = null;
-        this.persist();
         this.dispatchEvent('setCurrentItem');
         return;
     }
@@ -111,7 +102,6 @@ Gwiki.prototype.setCurrentItem = function(item) {
                 'alt' : 'media'
             }).then(function(response) {
                 t.currentItem.body = response.body;
-                t.persist();
                 t.dispatchEvent('setCurrentItem');
             });
 
@@ -122,13 +112,11 @@ Gwiki.prototype.setCurrentItem = function(item) {
                 mimeType : 'text/html'
             }).then(function(response) {
                 t.currentItem.body = response.body;
-                t.persist();
                 t.dispatchEvent('setCurrentItem');
             });
 
         // Otherwise, let the ui figure out what to do with it
         } else {
-            this.persist();
             this.dispatchEvent('setCurrentItem');
         }
 
@@ -164,18 +152,6 @@ Gwiki.prototype.setCurrentItem = function(item) {
     }
 }
 
-
-
-Gwiki.prototype.persist = function() {
-    if (typeof Storage != 'undefined' && this.persistence) {
-        localStorage.gwikiState = JSON.stringify({
-            home : this.home,
-            parents : this.parents,
-            currentItem : this.currentItem,
-            mainMenu : this.mainMenu
-        });
-    }
-}
 
 
 

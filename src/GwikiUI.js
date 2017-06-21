@@ -2,6 +2,8 @@ GwikiUI = function(opts) {
     var t = this;
     Utils.merge(this, {
         defaultHome : false,
+        home : null,
+        doc : null,
         config : {
             prettyUrls : false
         }
@@ -83,11 +85,29 @@ GwikiUI.interface = ['block','askForHome','drawStandardInterface'];
 // Interface Functions
 
 GwikiUI.prototype.init = function() {
-    var home,doc;
+    var home,doc,t=this;
+    
+    // Sanity check
+    if (!Utils.implements(Gwiki.interface, this.gwiki)) throw "You must provide an instance of Gwiki as the argument to initialize a GwikiUI.";
+    if (!Utils.implements(GwikiBridge.interface, this.bridge)) throw "You must provide an instance of GwikiBridge to initialize a GwikiUI.";
 
-    // Initialized gwiki with bridge
+    // Initialize gwiki with bridge
     this.gwiki.init(this.bridge);
 
+    // Add event listeners
+    // Errors
+    this.gwiki.addEventListener('error', function(e) { t.block(e.message); });
+    this.bridge.addEventListener('error', function(e) { t.block(e.message); });
+
+    // Information updates
+    this.gwiki.addEventListener('setHome', function(e) { t.rebuildFrame(); t.loading(false); });
+    this.gwiki.addEventListener('setCurrentItem', function(e) { t.rebuildItemInterface(); t.loading(false); });
+
+    // Signin status
+    this.bridge.addEventListener('signinStatusChanged', function(e) { t.toggleSignedIn(); });
+
+
+    // Parse initial information from url
     // If we're using pretty urls,
     if (this.config.prettyUrls) {
         var path = window.location.pathname;
@@ -111,26 +131,26 @@ GwikiUI.prototype.init = function() {
 
     // Otherwise, use the query string to get params
     } else {
+        var re;
         if (!this.defaultHome) {
-            home = window.location.search.match(/\bhome=([^&-]+)\b/);
+            re = new RegExp('\\bhome=('+GwikiUI.validGoogleId+')');
+            home = window.location.search.match(re);
             if (home) home = home[1];
         }
-        doc = window.location.search.match(/\bdoc=([^&-]+)\b/);
+        re = new RegExp('\\bdoc=('+GwikiUI.validGoogleId+')');
+        doc = window.location.search.match(re);
         if (doc) doc = doc[1];
     }
 
-    // If we have a default home, override
+    // If we have a default home, override with that
     if (this.defaultHome) home = this.defaultHome;
 
-    if (!home) this.askForHome();
-    else {
-        // NOW WE HAVE A HOME AND POSSIBLY A DOC
-        // WE ALSO HAVE A GWIKI WITH A BRIDGE
-        // NEED TO SET THE HOME AND POSSIBLY ALSO SET THE DOC, THEN
-        // LISTEN FOR COMPLETION OF THESE SO THAT WE CAN REBUILD THE FRAME
-        // WHEN GWIKI IS READY
-        this.rebuildFrame();
-    }
+    // TODO: Should call a method `setHome` or `setDoc` so that we can update URLS with these when links are clicked, too
+    if (home) this.home = home;
+    if (doc) this.doc = doc;
+
+    this.initialized = true;
+    this.toggleSignedIn();
 }
 
 
@@ -143,14 +163,56 @@ GwikiUI.prototype.askForHome = function() {
     blocker.getElementsByTagName('form')[0].addEventListener('submit', function(e) {
         e.preventDefault();
 
-        var folderId = document.getElementById("homeFolder").value;
-        if (folderId.lastIndexOf('/') >= 0) folderId = folderId.substr(folderId.lastIndexOf('/')+1);
-        var match = folderId.match(/[^a-zA-Z0-9_-]/);
-        if (match) folderId = folderId.substr(0, match.index);
+        var link = document.getElementById("homeFolder").value;
 
-        t.loading(true);
-        t.gwiki.setHome(folderId);
+        var re = new RegExp('^'+GwikiUI.validGoogleId+'$');
+        var folderId = link.match(re);
+        if (folderId) folderId = folderId[0];
+        else {
+            var re = new RegExp('\bid=('+GwikiUI.validGoogleId+')');
+            var folderId = link.match(re);
+            if (folderId) folderId = folderId[1];
+            else {
+                re = new RegExp('/folder/('+GwikiUI.validGoogleId+')');
+                folderId = link.match(re);
+                if (folderId) folderId = folderId[1];
+            }
+        }
+
+        // Show error if no valid id found
+        if (!folderId) alert('Invalid Id! Please enter either the full url from a google drive folder, or just the id part.');
+        else {
+            t.loading(true);
+            t.gwiki.setHome(folderId);
+        }
     });
+}
+
+
+
+// Toggle the signin sheet
+GwikiUI.prototype.toggleSignedIn = function() {
+    if (this.bridge.signedIn) {
+        this.unblock();
+        // TODO: Figure out what to do with this.doc
+        if (!this.gwiki.home) {
+            if (this.home) this.gwiki.setHome(this.home);
+            else this.askForHome();
+        } else {
+            this.rebuildFrame();
+            // TODO: get a gobject from this.doc
+            if (this.gwiki.currentItem.id != this.doc) this.gwiki.setCurrentItem(this.doc);
+            else this.rebuildItemInterface();
+        }
+    } else {
+        this.block(GwikiUI.strings.displayTitle + GwikiUI.strings.tagline + GwikiUI.strings.signinButton);
+        
+        // Load signin button
+        var btn = this.blocker.getElementsByClassName('g-signin');
+        if (btn.length == 0) return;
+        btn = btn[0];
+        btn.addEventListener('click', function(e) { this.loading(true); bridge.signin(); });
+    }
 }
 
 
@@ -286,58 +348,6 @@ GwikiUI.prototype.loading = function(loading) {
 
 
 
-// Subscriptions
-
-GwikiUI.prototype.subscribeGwikiListeners = function(gwiki) {
-    var t = this;
-    if (!Utils.implements(Gwiki.interface, gwiki)) throw "You must provide an instance of Gwiki as the argument to this function.";
-    gwiki.addEventListener('error', function(e) { t.block(e.message); });
-    gwiki.addEventListener('init', function(e) {
-        t.gwiki = e.target;
-        if (!t.initialized && t.ready) t.init();
-    });
-    gwiki.addEventListener('setHome', function(e) { t.init(); t.loading(false); });
-    gwiki.addEventListener('setCurrentItem', function(e) { t.rebuildItemInterface(); t.loading(false); });
-}
-
-GwikiUI.prototype.subscribeGwikiBridgeListeners = function(bridge) {
-    var t = this;
-    if (!Utils.implements(GwikiBridge.interface, bridge)) throw "You must provide an instance of GwikiBridge as the argument to this function.";
-
-    bridge.addEventListener('error', function(e) { t.block(e.message); });
-    bridge.addEventListener('signinStatusChanged', function(e) {
-        if (e.target.signedIn) {
-            t.ready = true;
-            t.unblock();
-            if (t.gwiki) {
-                if (!t.initialized) {
-                    t.init();
-                    if (t.gwiki.currentItem) t.rebuildItemInterface();
-                    else if (t.gwiki.home) t.gwiki.setCurrentItem(t.gwiki.home);
-                }
-            } else {
-                t.loading(true);
-            }
-        } else {
-            t.ready = false;
-            t.block(GwikiUI.strings.displayTitle + GwikiUI.strings.tagline + GwikiUI.strings.signinButton);
-            
-            // Load signin button
-            var btn = t.blocker.getElementsByClassName('g-signin');
-            if (btn.length == 0) return;
-            btn = btn[0];
-            btn.addEventListener('click', function(e) { t.loading(true); bridge.signin(); });
-        }
-    });
-}
-
-
-
-
-
-
-
-
 
 // Utility functions and extras
 
@@ -410,7 +420,9 @@ GwikiUI.prototype.parseContentLinks = function() {
 
 
 
-// String library
+// Class constants
+
+GwikiUI.validGoogleId = '[a-zA-Z0-9_-]+';
 
 GwikiUI.strings = {
     'title' : 'Gwiki',
