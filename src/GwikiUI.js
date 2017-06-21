@@ -1,6 +1,11 @@
 GwikiUI = function(opts) {
     var t = this;
-    Utils.merge(this, {}, opts || {});
+    Utils.merge(this, {
+        defaultHome : false,
+        config : {
+            prettyUrls : false
+        }
+    }, opts || {});
 
     // Sanity Check
     if (typeof this.root == 'undefined' || typeof this.root.appendChild == 'undefined') throw "You must provide a root ui element as part of the options hash when you construct a GwikiUI object (something like `new GwikiUI({ root: document.getElementById('gwiki-ui') })`)";
@@ -78,9 +83,54 @@ GwikiUI.interface = ['block','askForHome','drawStandardInterface'];
 // Interface Functions
 
 GwikiUI.prototype.init = function() {
-    this.initialized = true;
-    if (this.gwiki.home === null) this.askForHome();
-    else this.rebuildFrame();
+    var home,doc;
+
+    // Initialized gwiki with bridge
+    this.gwiki.init(this.bridge);
+
+    // If we're using pretty urls,
+    if (this.config.prettyUrls) {
+        var path = window.location.pathname;
+        
+        // If a path is given,
+        if (path != '/') {
+            path = path.substr(1).split('/');
+
+            // If the path has two parts,
+            if (path.length == '2') {
+                // Then set home and doc
+                home = path[0];
+                doc = path[1];
+
+            // Otherwise, set doc if defaultHome was provided, otherwise set home
+            } else {
+                if (this.defaultHome) doc = path[0];
+                else home = path[0]
+            }
+        }
+
+    // Otherwise, use the query string to get params
+    } else {
+        if (!this.defaultHome) {
+            home = window.location.search.match(/\bhome=([^&-]+)\b/);
+            if (home) home = home[1];
+        }
+        doc = window.location.search.match(/\bdoc=([^&-]+)\b/);
+        if (doc) doc = doc[1];
+    }
+
+    // If we have a default home, override
+    if (this.defaultHome) home = this.defaultHome;
+
+    if (!home) this.askForHome();
+    else {
+        // NOW WE HAVE A HOME AND POSSIBLY A DOC
+        // WE ALSO HAVE A GWIKI WITH A BRIDGE
+        // NEED TO SET THE HOME AND POSSIBLY ALSO SET THE DOC, THEN
+        // LISTEN FOR COMPLETION OF THESE SO THAT WE CAN REBUILD THE FRAME
+        // WHEN GWIKI IS READY
+        this.rebuildFrame();
+    }
 }
 
 
