@@ -122,7 +122,7 @@ GwikiUI.prototype.init = function() {
                 home = path[0];
                 doc = path[1];
 
-            // Otherwise, set doc if defaultHome was provided, otherwise set home
+            // Otherwise, set doc if defaultHome was provided, or home if not
             } else {
                 if (this.defaultHome) doc = path[0];
                 else home = path[0]
@@ -183,7 +183,7 @@ GwikiUI.prototype.askForHome = function() {
         if (!folderId) alert('Invalid Id! Please enter either the full url from a google drive folder, or just the id part.');
         else {
             t.loading(true);
-            t.gwiki.setHome(folderId);
+            t.gwiki.setHome(folderId, t.doc);
         }
     });
 }
@@ -192,17 +192,16 @@ GwikiUI.prototype.askForHome = function() {
 
 // Toggle the signin sheet
 GwikiUI.prototype.toggleSignedIn = function() {
+    var t = this;
     if (this.bridge.signedIn) {
         this.unblock();
-        // TODO: Figure out what to do with this.doc
         if (!this.gwiki.home) {
-            if (this.home) this.gwiki.setHome(this.home);
+            if (this.home) this.gwiki.setHome(this.home, this.doc);
             else this.askForHome();
         } else {
             this.rebuildFrame();
-            // TODO: get a gobject from this.doc
-            if (this.gwiki.currentItem.id != this.doc) this.gwiki.setCurrentItem(this.doc);
-            else this.rebuildItemInterface();
+            if (this.gwiki.currentItem.id == this.doc) this.rebuildItemInterface();
+            else this.gwiki.setCurrentItem(this.doc);
         }
     } else {
         this.block(GwikiUI.strings.displayTitle + GwikiUI.strings.tagline + GwikiUI.strings.signinButton);
@@ -211,7 +210,7 @@ GwikiUI.prototype.toggleSignedIn = function() {
         var btn = this.blocker.getElementsByClassName('g-signin');
         if (btn.length == 0) return;
         btn = btn[0];
-        btn.addEventListener('click', function(e) { this.loading(true); bridge.signin(); });
+        btn.addEventListener('click', function(e) { t.loading(true); t.bridge.signin(); });
     }
 }
 

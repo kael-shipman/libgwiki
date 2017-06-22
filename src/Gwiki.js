@@ -29,7 +29,7 @@ Gwiki.prototype.init = function(bridge) {
 
 
 
-Gwiki.prototype.setHome = function(folderId) {
+Gwiki.prototype.setHome = function(folderId, defaultDoc) {
     var t = this;
     if (!folderId) {
         this.home = null;
@@ -55,8 +55,9 @@ Gwiki.prototype.setHome = function(folderId) {
                 }
             }
 
-            // Set current item to home
-            t.setCurrentItem(t.home);
+            // Set current item to defaultDoc or home
+            if (!defaultDoc) defaultDoc = t.home;
+            t.setCurrentItem(defaultDoc);
 
             // Tell listeners that we've set home
             t.dispatchEvent('setHome');
@@ -74,6 +75,17 @@ Gwiki.prototype.setCurrentItem = function(item) {
     if (!item) {
         this.currentItem = null;
         this.dispatchEvent('setCurrentItem');
+        return;
+    }
+
+
+    // If item is a string, we need to get an object from it and try again
+    if (typeof item == 'string') {
+        this.getItemById(item).then(function(response) {
+            var item = response.result;
+            t.setExtraAttributes(item);
+            t.setCurrentItem(item);
+        });
         return;
     }
 
