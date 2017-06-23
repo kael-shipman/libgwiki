@@ -260,8 +260,6 @@ Gwiki.prototype.setExtraAttributes = function(item) {
     if (prefix) displayName = displayName.substr(prefix[0].length);
     if (suffix) displayName = displayName.substr(0, (displayName.length - suffix[0].length));
     item.displayName = displayName;
-
-    console.log(item);
 }
 
 
