@@ -40,6 +40,10 @@ Gwiki.prototype.setHome = function(folderId, defaultDoc) {
         return;
     }
 
+    // If we're setting it to the current home, just exit
+    if (this.home && folderId == this.home.id) return;
+
+    // Otherwise, change home
     this.getItemById(folderId).then(function(response) {
         t.home = response.result;
         t.setExtraAttributes(t.home);
@@ -76,6 +80,14 @@ Gwiki.prototype.setCurrentItem = function(item) {
         this.currentItem = null;
         this.dispatchEvent('setCurrentItem');
         return;
+    }
+
+
+    // If we're already on this item, exit
+    if (this.currentItem) {
+        if (typeof item == 'string') {
+            if (item == this.currentItem.id) return;
+        } else if (item.id == this.currentItem.id) return
     }
 
 

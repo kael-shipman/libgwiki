@@ -43,6 +43,7 @@
         gwiki: window.gwiki,
         bridge : window.gwikiBridge,
         markdownParser: function() { var c = new Markdown.Converter(); Markdown.Extra.init(c); this.markdownParser = c; },
+        defaultHome : null,
         config: {
             prettyUrls : false
         }

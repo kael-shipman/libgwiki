@@ -12,6 +12,9 @@ GwikiUI = function(opts) {
     // Sanity Check
     if (typeof this.root == 'undefined' || typeof this.root.appendChild == 'undefined') throw "You must provide a root ui element as part of the options hash when you construct a GwikiUI object (something like `new GwikiUI({ root: document.getElementById('gwiki-ui') })`)";
 
+    // Load window.popstate listener for back/forward events
+    window.onpopstate = function(e) { t.updateFromUrl(); }
+
     // Make initial UI
 
     // Header
@@ -100,12 +103,21 @@ GwikiUI.prototype.init = function() {
     this.bridge.addEventListener('error', function(e) { t.block(e.message); });
 
     // Information updates
-    this.gwiki.addEventListener('setHome', function(e) { t.rebuildFrame(); t.loading(false); });
-    this.gwiki.addEventListener('setCurrentItem', function(e) { t.rebuildItemInterface(); t.loading(false); });
+    this.gwiki.addEventListener('setHome', function(e) { t.onSetHome(e); });
+    this.gwiki.addEventListener('setCurrentItem', function(e) { t.onSetCurrentItem(e); });
 
     // Signin status
     this.bridge.addEventListener('signinStatusChanged', function(e) { t.toggleSignedIn(); });
 
+    this.updateFromUrl();
+    this.initialized = true;
+}
+
+
+
+// Refreshes state variables from url and gets new data, if necessary
+GwikiUI.prototype.updateFromUrl = function() {
+    var path, home, doc, re;
 
     // Parse initial information from url
     // If we're using pretty urls,
@@ -131,7 +143,6 @@ GwikiUI.prototype.init = function() {
 
     // Otherwise, use the query string to get params
     } else {
-        var re;
         if (!this.defaultHome) {
             re = new RegExp('\\bhome=('+GwikiUI.validGoogleId+')');
             home = window.location.search.match(re);
@@ -145,12 +156,31 @@ GwikiUI.prototype.init = function() {
     // If we have a default home, override with that
     if (this.defaultHome) home = this.defaultHome;
 
-    // TODO: Should call a method `setHome` or `setDoc` so that we can update URLS with these when links are clicked, too
-    if (home) this.home = home;
-    if (doc) this.doc = doc;
+    this.updateState(home, doc);
 
-    this.initialized = true;
     this.toggleSignedIn();
+}
+
+
+
+// When home is set
+GwikiUI.prototype.onSetHome = function(e) {
+    if (e.target.home) this.home = e.target.home.id;
+    else this.home = null;
+    this.updateState(this.home, this.doc);
+    this.rebuildFrame();
+    this.loading(false);
+}
+
+
+
+// When currentItem is set
+GwikiUI.prototype.onSetCurrentItem = function(e) {
+    if (e.target.currentItem) this.doc = e.target.currentItem.id;
+    else this.doc = false;
+    this.updateState(this.home, this.doc);
+    this.rebuildItemInterface();
+    this.loading(false);
 }
 
 
@@ -349,6 +379,84 @@ GwikiUI.prototype.loading = function(loading) {
 
 
 // Utility functions and extras
+
+GwikiUI.prototype.updateState = function(home, doc) {
+    if (home) this.home = home;
+    if (doc) this.doc = doc;
+
+    var title = [], state = {}, url = [];
+
+    // Do title
+    if (this.gwiki.currentItem) title.push(this.gwiki.currentItem.displayName);
+    if (this.gwiki.home) title.push(this.gwiki.home.displayName);
+    if (title.length > 0) title = title.join(' - ');
+    else title = GwikiUI.strings.title;
+
+    // Do URL
+    // If using prettyUrls,
+    if (this.config.prettyUrls) {
+        // Build the url from parts
+        if (this.defaultHome) {
+            if (this.doc) url.push('/' + this.doc);
+        } else if (this.home) {
+            url.push('/' + this.home);
+            if (this.doc) url.push('/' + this.doc);
+        }
+        url = url.join('');
+
+        // Don't change anything if we haven't changed pages
+        if (url == '') url = '/';
+        if (url == window.location.pathname) return;
+
+        // Otherwise, fix url and fall through to pushState
+        if (url == '/') url = '';
+
+    // If not using prettyUrls,
+    } else {
+        var query = {};
+        url = window.location.search;
+
+        // Get current url parameters
+        if (url.length > 0) url = url.substr(1);
+        url = url.split('&');
+        for (var i = 0, parts; i < url.length; i++) {
+            parts = url[i].split('=');
+            query[parts.shift()] = parts.join('=');
+        }
+
+        // If we're not changing anything, get out
+        if (query.doc == this.doc && query.home == this.home) return;
+
+        // If we've set a default home, suppress inclusion of home variable
+        if (this.defaultHome) {
+            if (typeof query.home != 'undefined') delete query.home;
+
+        // Otherwise, set to current home, or delete if no current home
+        } else {
+            if (this.home) query.home = this.home;
+            else delete query.home;
+        }
+        
+        // Add doc, or delete if not available
+        if (this.doc) query.doc = this.doc;
+        else delete query.doc;
+
+        // Reconstruct url
+        url = [];
+        for (var x in query){
+            if (x != '') url.push(x+'='+query[x]);
+        }
+        url = '?' + url.join('&');
+
+        // Fall through to pushState
+    }
+
+    // Do the work
+    window.history.pushState({ 'home' : this.home, 'doc' : this.doc }, title, url);
+    document.title = title;
+}
+
+
 
 GwikiUI.prototype.cleanHtml = function(html) {
     var st = html.indexOf('<body>');
