@@ -260,6 +260,8 @@ Gwiki.prototype.setExtraAttributes = function(item) {
     if (prefix) displayName = displayName.substr(prefix[0].length);
     if (suffix) displayName = displayName.substr(0, (displayName.length - suffix[0].length));
     item.displayName = displayName;
+
+    console.log(item);
 }
 
 
@@ -272,8 +274,16 @@ Gwiki.consumableTypes = [
     'application/vnd.google-apps.folder',
     'application/vnd.google-apps.document',
     'application/vnd.google-apps.spreadsheet',
+    'application/vnd.google-apps.presentation',
     'text/x-markdown',
     'text/markdown',
+    'text/html',
+    'application/rtf',
+    'application/vnd.oasis.opendocument.text',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.oasis.opendocument.presentation',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/pdf',
     'text/plain'
 ];
 

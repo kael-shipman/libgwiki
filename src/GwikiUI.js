@@ -472,9 +472,8 @@ GwikiUI.prototype.cleanHtml = function(html) {
 
 GwikiUI.prototype.getEmbedString = function() {
     var i = this.gwiki.currentItem;
-    if (i.mimeType == 'application/vnd.google-apps.document') return '<iframe class="google-doc" src="https://docs.google.com/document/d/'+i.id+'/preview">';
-    else if (i.mimeType == 'application/vnd.google-apps.spreadsheet') return '<iframe class="google-doc" src="https://docs.google.com/spreadsheets/d/'+i.id+'/preview">';
-    else return GwikiUI.strings['errUnknownEmbedType'].replace('$type', i.mimeType);
+    return '<iframe class="google-doc" src="https://drive.google.com/file/d/'+i.id+'/preview">';
+    //else return GwikiUI.strings['errUnknownEmbedType'].replace('$type', i.mimeType);
 }
 
 
