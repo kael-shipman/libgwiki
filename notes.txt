@@ -1,0 +1,297 @@
+------------------------------
+Initial
+------------------------------
+
+Home <---
+    - one
+    - two
+    - three
+    - four
+    - five
+
+currentItem = Home
+navStack = [ home ]
+
+---
+
+setHome(home, null)
+    * get home's meta info
+    * add extra data
+    * get home's children
+        * add extra data
+    * select(home)
+
+-------------------------------
+Click "three"
+-------------------------------
+
+Home
+    - one
+    - two
+    - three <---
+        - A
+        - B
+        - C
+        - D
+        - E
+    - four
+    - five
+
+currentItem = three
+navStack = [ three ]
+
+--
+
+select(three)
+    * Set three to targSelected
+    * Get three's children
+        * If child name matches parent name, blend info, set bodySrc to child ID
+    * Get three's body using bodySrc
+    * Move up parent hierarchy setting "targSelect" on all parents and parent-siblings
+    * rebuildObjectTree()
+        * Iterate through all children of home
+            * If not targSelecte, clear children and clear select
+    * If gwikiObj, reset navstack to three
+    * Else push onto end of navstack
+
+-------------------------------
+Click "C"
+-------------------------------
+
+Home
+    - one
+    - two
+    - three
+        - A
+        - B
+        - C
+            - x <---
+            - y
+            - z
+        - D
+        - E
+    - four
+    - five
+
+currentItem = "x"
+navStack = [ three, C, x ]
+
+-------------------------------
+Click "y"
+-------------------------------
+
+Home
+    - one
+    - two
+    - three
+        - A
+        - B
+        - C
+            - x
+            - y <---
+                - my doc
+                - your doc
+            - z
+        - D
+        - E
+    - four
+    - five
+
+currentItem = 'y'
+navStack = [ three, C, y ]
+
+-------------------------------
+Click "your doc"
+-------------------------------
+
+Home
+    - one
+    - two
+    - three
+        - A
+        - B
+        - C
+            - x
+            - y
+                - my doc
+                - your doc <---
+            - z
+        - D
+        - E
+    - four
+    - five
+
+currentItem = 'your doc'
+navStack = [ three, C, y, your doc ]
+
+-------------------------------
+Click "A"
+-------------------------------
+
+Home
+    - one
+    - two
+    - three
+        - A
+            - uno <---
+            - dos
+            - tres
+        - B
+        - C
+        - D
+        - E
+    - four
+    - five
+
+currentItem = 'uno'
+navStack = [ three, A, uno ]
+
+-------------------------------
+Click doc link to "my doc"
+-------------------------------
+
+Home
+    - one
+    - two
+    - three
+        - A
+        - B
+        - C
+            - x
+            - y
+                - my doc <---
+                - your doc
+            - z
+        - D
+        - E
+    - four
+    - five
+
+currentItem = 'my doc'
+navStack = [ three, A, uno, my doc ]
+
+-------------------------------
+Click doc link to outside doc
+-------------------------------
+
+Home
+    - one
+    - two
+    - three
+    - four
+    - five
+
+currentItem = 'outside doc'
+navStack = [ three, A, uno, my doc, outside doc ]
+
+
+
+
+Should maintain metadata cache locally
+Home should have a valid children collection
+"Main menu" should come from home's children collection.
+On select menu item, fill children array, if any 
+Maintain "Current path", indicating the current link path.
+    Reset on menu item click (to menu item)
+
+
+
+
+At any one time, we should only have ONE body in memory, and we should only store metadata for current object tree (which doesn't include impertinent children)
+When folder selected, if folder has document whose displayName matches folder name, blend data into a single GwikiObject with folderId as id.
+
+
+## PROPERTIES
+
+* Object Tree
+* Home (points to root of object tree)
+* Current Item (points to leaf of object tree)
+
+## METHODS
+
+### Gwiki
+
+* Select -- accepts either GwikiObject or string (url/id)
+    * If GwikiObject, 
+
+* Click menu item
+    * Fetches clicked item
+    * Reset currentPath to menu item path
+    * Updates Object Tree
+
+* Click link
+    * Fetches clicked item
+    * appends current item to item path
+    * Updates Object Tree
+
+* Click currentPath item
+    * Fetches clicked item
+    * Removes currentPath items up to clicked item
+    * Updates Object Tree
+
+* Update Object Tree
+    * Attempts to find current object in object tree
+        * If not found:
+            * build object tree from selected
+                * Get all parent objects
+                * For each parent:
+                    * Get siblings
+                    * For each sibling:
+                        * (Get all parent objects)
+                        * ....
+                    * Until root is found. Then use that tree.
+                    * If root not found, 
+            * delete object tree from selected 1st child of root down
+        * If found:
+            * De
+
+
+## OPTIONS:
+
+* "Refresh Menus" -- should rebuild home's children collection, as well as side menu
+
+Objects in memory:
+
+* Home
+* One
+* Two
+* Three
+* Four
+* Five
+* A
+* B
+* C
+* D
+* E
+* x
+* y
+* z
+* my odc
+* your doc
+
+Body text in memory: "your doc"
+
+
+
+## GwikiObject
+
+### PROPERTIES
+
+* id
+* displayName
+* name
+* body
+* bodySrc
+* mimeType
+* gwikiType
+* isTerminus
+* isConsumable
+* selected
+* (p)children
+* (p)parents
+
+### Methods
+
+* getChildren
+* getParents
+

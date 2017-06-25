@@ -315,7 +315,6 @@ GwikiUI.prototype.updateMenuSelections = function() {
 
 
 GwikiUI.prototype.drawSideMenu = function() {
-    console.log("Drawing side menu");
     // Clear submenu
     this.subMenu = [];
     this.subMenuContainer.innerHTML = '';
@@ -351,10 +350,11 @@ GwikiUI.prototype.buildHierarchicalMenu = function(node) {
     });
 
     // Mark selected, if pertinent
-    var p = this.gwiki.currentItem;
-    while (p.parents && !p.parents[0].isHome) {
+    var p = this.gwiki.currentItem, selected = false;
+    while (p.parents && !p.isHome) {
         if (p.id == node.id) {
             item.classList.add('selected');
+            selected = true;
             break;
         }
         p = p.parents[0];
@@ -362,13 +362,9 @@ GwikiUI.prototype.buildHierarchicalMenu = function(node) {
 
     container.appendChild(item);
 
-    if (node.children && node.children.length > 0) {
-        submenu = document.createElement('nav');
-        item.className = 'side-menu';
-        for (var i = 0; i < node.children.length; i++) {
-            submenu.appendChild(this.buildHierarchicalMenu(node.children[i]));
-        }
-        container.appendChild(submenu);
+    // If this is a selected node and has children, show them
+    if (selected && node.children && node.children.length > 0) {
+        for (var i = 0; i < node.children.length; i++) container.appendChild(this.buildHierarchicalMenu(node.children[i]));
     }
 
     return container;

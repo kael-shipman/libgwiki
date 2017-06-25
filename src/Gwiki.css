@@ -99,9 +99,21 @@
     overflow-y: auto;
 }
 
+.gwiki-ui .gwiki-sub-menu .menu-container {
+    margin-left: 20px;
+}
+.gwiki-ui .gwiki-sub-menu>.menu-container {
+    margin-left: 0;
+}
+
 .gwiki-ui .gwiki-sub-menu a {
     display: block;
     padding: 10px;
+}
+
+.gwiki-ui .gwiki-sub-menu > .menu-container > a {
+    font-weight: bold;
+    font-size: 1.8rem;
 }
 
 .gwiki-ui .gwiki-sub-menu .gwiki-group-header {
