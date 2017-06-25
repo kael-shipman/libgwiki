@@ -1,7 +1,14 @@
 Utils = {
     merge : function() {
         for (var i = 1; i < arguments.length; i++) {
-            for (var x in arguments[i]) arguments[0][x] = arguments[i][x];
+            for (var x in arguments[i]) {
+                // Do deep merge if both are non-array objects and if neither is null
+                if (arguments[0][x] !== null && arguments[i][x] !== null && typeof arguments[0][x] == 'object' && !(arguments[0][x] instanceof Array) && typeof arguments[i][x] == 'object' && !(arguments[i][x] instanceof Array)) {
+                    Utils.merge(arguments[0][x], arguments[i][x]);
+                } else {
+                    arguments[0][x] = arguments[i][x];
+                }
+            }
         }
     },
 

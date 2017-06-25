@@ -62,6 +62,52 @@ GwikiBridge.prototype.signin = function() {
 
 
 
+// Get Items
+GwikiBridge.prototype.getItemById = function(id, t) {
+    var callback;
+    if (!t) t = this;
+
+    gapi.client.drive.files.get({
+        'fileId' : id
+    }).then(function(response) {
+        var gwikiItemProps = response.result;
+        t.dispatchEvent('getItem', { "gwikiItemProps" : gwikiItemProps });
+        if (callback) callback.call(t, gwikiItemProps);
+    });
+
+    return { then : function(c) { callback = c; } };
+}
+
+
+
+// Get Children
+GwikiBridge.prototype.getChildrenFor = function(gwikiItem, userParams, t) {
+    var callback;
+    var params = {
+        'pageSize' : 1000,
+        'fields' : 'files(id, name, mimeType)'
+    };
+    Utils.merge(params, userParams || {});
+    if (!t) t = this;
+
+    // Sanity check
+    if (typeof gwikiItem == 'object') {
+        if (!gwikiItem.id) throw "GwikiBridge::getChildFor must receive either an item id (string) or a GwikiItem with an `id` property as its argument. The object you've passed doesn't appear to have an `id` property set.";
+        gwikiItem = gwikiItem.id;
+    }
+    params['q'] = "'"+gwikiItem+"' in parents and trashed = false",
+
+    gapi.client.drive.files.list(params).then(function(response) {
+        var children = response.result.files;
+        t.dispatchEvent('getChildren', { "for" : gwikiItem, "children" : children });
+        if (callback) callback.call(t, children);
+    });
+
+    return { then : function(c) { callback = c } };
+}
+
+
+
 
 
 

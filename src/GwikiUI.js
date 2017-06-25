@@ -509,10 +509,7 @@ GwikiUI.prototype.parseContentLinks = function() {
 
                 // Otherwise, redirect it
                 e.preventDefault();
-                t.gwiki.getItemById(id[2]).then(function(response) {
-                    t.gwiki.setExtraAttributes(response.result);
-                    t.gwiki.setCurrentItem(response.result);
-                })
+                t.gwiki.setCurrentItem(id[2]);
             });
 
         // If it's not a google link, make sure it opens outside
