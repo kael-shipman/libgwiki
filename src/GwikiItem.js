@@ -96,7 +96,7 @@ GwikiItem.prototype.getChildren = function() {
 
     this.bridge.getChildrenFor(this).then(function(items) {
         // Instanitate, filter and sort
-        t.prepareItemsCollection(items);
+        items = t.prepareItemsCollection(items);
 
         // Now separate content child from regular children
         for (var i = 0; i < items.length; i++) {
