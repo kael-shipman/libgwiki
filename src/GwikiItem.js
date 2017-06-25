@@ -2,8 +2,8 @@
  * GwikiItem - an object representing a GoogleDrive object with extra fields pertinent to Gwiki
  */
 
-GwikiItem = function(opts) {
-    Utils.merge(this, {
+GwikiItem = function(opts, debug) {
+    var t, defaultParams = {
         id: null,
         name: null,
         displayName: null,
@@ -16,41 +16,47 @@ GwikiItem = function(opts) {
         selected: false,
         children: null,
         parents: null,
-        bridge: null
-    }, opts || {});
+        bridge: null,
+        isHome: false
+    };
 
-    // Check to see if any parent or child collections contain invalid items
-    var check = {};
-    if (this.children) check.children = this.children;
-    if (this.parents) check.parents = this.parents;
-    for (var x in check) {
-        for (var j = 0; j < check[x].length; j++) {
-            if (!Utils.implements(GwikiItem.interface, check[x][j])) {
-                throw 'Invalid object passed to ' + x + ' array! If you pass ' + x + ' into the constructor of a GwikiItem, they must already be GwikiItem objects (i.e., implement the interface defined at `GwikiItem.interface`). (Object #' + j + ')';
-            }
+    // Get cached item, if possible
+    if (typeof opts.id != 'undefined') {
+        if (typeof GwikiItem.cache[opts.id] == 'undefined') {
+            Utils.merge(this, defaultParams, opts || {});
+            GwikiItem.cache[opts.id] = this;
+            t = this;
+        } else {
+            t = GwikiItem.cache[opts.id];
         }
+    } else {
+        t = this;
+        Utils.merge(t, defaultParams, opts || {});
     }
 
+
     // Set extra attributes that might not already be set
-    this.setAttributes();
+    t.setExtraAttributes(debug);
+
+    return t;
 }
 
 GwikiItem.prototype = Object.create(Object.prototype);
-GwikiItem.interface = [ 'id', 'name', 'displayName', 'mimeType', 'gwikiType', 'body', 'bodySrc', 'isTerminus', 'isConsumable', 'selected', 'children', 'parents', 'setChildren', 'setParents' ];
+GwikiItem.interface = [ 'id', 'name', 'displayName', 'mimeType', 'gwikiType', 'body', 'bodySrc', 'isTerminus', 'isConsumable', 'selected', 'children', 'parents', 'getParents' ];
 
 
 
 
 
-GwikiItem.prototype.setAttributes = function() {
+GwikiItem.prototype.setExtraAttributes = function() {
     // If it's not a folder, then it's a "terminus" page
     if (this.isTerminus === null) this.isTerminus = (this.mimeType != 'application/vnd.google-apps.folder');
 
     // If it's terminus, then it's its own bodySrc (otherwise we don't know)
-    if (this.bodySrc === null) this.bodySrc = (this.isTerminus ? this.id : null);
+    if (this.bodySrc === null) this.bodySrc = (this.isTerminus ? this : null);
 
     // See if it's "consumable" by our wiki
-    if (this.isConsumable === null) {
+    if (this.isConsumable === null && this.mimeType && this.name) {
         this.isConsumable = (
             GwikiItem.consumableTypes.indexOf(this.mimeType) > -1 ||
             this.name.substr(-3) == '.md'
@@ -58,7 +64,7 @@ GwikiItem.prototype.setAttributes = function() {
     }
 
     // See if it's text format
-    if (this.gwikiType === null) {
+    if (this.gwikiType === null && this.mimeType && this.name) {
         if (this.mimeType == 'text/x-markdown' || this.mimeType == 'text/markdown' || this.mimeType == 'text/plain' || this.name.substr(-3) == '.md') this.gwikiType = 'text/markdown';
         else if (this.mimeType == 'text/html' || this.mimeType == 'application/vnd.google-apps.document') this.gwikiType = 'text/html';
         else this.gwikiType = 'unknown';
@@ -66,7 +72,7 @@ GwikiItem.prototype.setAttributes = function() {
     
 
     // Remove prefixes and suffixes for display names
-    if (this.displayName === null) {
+    if (this.displayName === null && this.name) {
         var displayName = this.name;
         var prefix = displayName.match(/^[0-9_. -]/);
         var suffix = displayName.match(/\..{1,4}$/);
@@ -82,7 +88,7 @@ GwikiItem.prototype.getChildren = function() {
     this.checkBridge();
 
     var t = this, children = [], callback;
-    var go = { then: function(c) { c.call(t, t.children); } };
+    var go = { then: function(c) { c(t.children); } };
     var thenGo = { then: function(c) { callback = c; } };
 
     // If we've already gotten the children, return
@@ -95,20 +101,70 @@ GwikiItem.prototype.getChildren = function() {
         // Now separate content child from regular children
         for (var i = 0; i < items.length; i++) {
             // Now, if child has same name as parent and isn't a folder, set it as the bodySrc of parent
-            if (items[i].displayName == this.displayName && items[i].isTerminus) {
-                if (items[i].isConsumable) this.bodySrc = items[i].id;
+            if (items[i].displayName == t.displayName && items[i].isTerminus) {
+                if (items[i].isConsumable) t.bodySrc = items[i];
             
             // Else, add it to the children list
             } else children.push(items[i]);
         }
 
-        this.children = children;
+        t.children = children;
 
         // Then call callback
-        if (callback) callback.call(t, t.children);
+        if (callback) callback(t.children);
     });
 
     return { then: function(c) { callback = c; } };
+}
+
+
+
+GwikiItem.prototype.getBody = function() {
+    this.checkBridge();
+
+    var t = this, callback;
+    var go = { then: function(c) { c(t.body); } };
+    var thenGo = { then: function(c) { callback = c; } };
+
+    // If no bodySrc, can't get body
+    if (!this.bodySrc) {
+        return go;
+    }
+
+    else {
+        // If bodySrc not up to date, update it and try again
+        if (!this.bodySrc.mimeType || !this.bodySrc.gwikiType) {
+            this.bodySrc.update().then(function() {
+                t.getBody().then(function() {
+                    if (callback) callback(t.body);
+                });
+            });
+            return thenGo;
+        }
+
+        // If it's markdown, download the content
+        if (this.bodySrc.gwikiType == 'text/markdown' || this.bodySrc.mimeType == 'text/html') {
+            this.bridge.downloadContent(this.bodySrc).then(function(body) {
+                t.body = body;
+                t.bodySrc.body = body;
+                if (callback) callback(t.body);
+            });
+
+        // If it's a doc, export it as html
+        } else if (this.bodySrc.mimeType == 'application/vnd.google-apps.document') {
+            this.bridge.exportContent(this.bodySrc).then(function(body) {
+                t.body = body;
+                t.bodySrc.body = body;
+                if (callback) callback(t.body);
+            });
+
+        // Otherwise, can't download body content, must embed (just return)
+        } else {
+            return go;
+        }
+
+        return thenGo;
+    }
 }
 
 
@@ -118,9 +174,24 @@ GwikiItem.prototype.prepareItemsCollection = function(items) {
 
     // Complete info and filter for consumables
     for (var i = 0; i < items.length; i++) {
-        items[i] = new GwikiItem(items[i]);
+        // First, add "this" to parents array
+        if (items[i].parents && items[i].parents.length) {
+            for (j = 0; j < items[i].parents.length; j++) {
+                if (items[i].parents[j] == this.id) {
+                    items[i].parents[j] = this;
+                    added = true;
+                    break;
+                }
+            }
+            if (j == items[i].parents[j].length) items[i].parents[j] = this;
+        }
+
+        items[i] = new GwikiItem(items[i], true);
         if (!items[i].isConsumable) continue;
+
         items[i].bridge = this.bridge;
+
+        // Add to children array
         children.push(items[i]);
     }
 
@@ -140,8 +211,65 @@ GwikiItem.prototype.prepareItemsCollection = function(items) {
 
 
 
+GwikiItem.prototype.update = function() {
+    var t = this, callback;
+    this.checkBridge();
+    this.bridge.getItemById(this.id).then(function(item) {
+        for (var x in t) {
+            if (typeof t[x] == 'function') continue;
+            if (typeof item[x] != 'undefined') t[x] = item[x];
+        }
+        t.setExtraAttributes();
+        if (callback) callback(t);
+    });
+    return { then: function(c) { callback = c; } };
+}
 
-Gwiki.prototype.checkBridge = function() {
+
+
+GwikiItem.prototype.getParents = function() {
+    var t = this, callback;
+    var go = { then: function(c) { c(t.parents); } };
+    var thenGo = { then: function(c) { callback = c; } };
+
+    if (this.isHome) {
+        this.parents = [];
+        return go;
+    }
+
+    // If we don't have a parents collection, get one and try again
+    if (!this.parents) {
+        this.update().then(function() {
+            t.getParents().then(function() {
+                if (callback) callback(t.parents);
+            });
+        });
+        return thenGo;
+    }
+
+    // If we do, make sure they're all instantiated
+    var returnCounter = 0;
+    for (var j = 0; j < this.parents.length; j++) {
+        if (typeof this.parents[j] == 'string') {
+            this.parents[j] = new GwikiItem({ "id" : this.parents[j], "bridge" : this.bridge });
+            this.parents[j].update().then(function() {
+                returnCounter++;
+                if (returnCounter == t.parents.length && callback) callback(t.parents);
+            });
+        } else {
+            if (!(this.parents[j] instanceof GwikiItem)) throw GwikiItem.strings['errParentInvalid'];
+            returnCounter++;
+        }
+    }
+
+    if (returnCounter == t.parents.length) return go;
+    else return thenGo;
+}
+
+
+
+
+GwikiItem.prototype.checkBridge = function() {
     if (!Utils.implements(GwikiBridge.interface, this.bridge)) throw "If you pass a `bridge` property, it must be a valid GwikiBridge object (see `GwikiBridge.interface` for methods and properties that you must implement)";
 }
 
@@ -150,6 +278,7 @@ Gwiki.prototype.checkBridge = function() {
 
 
 
+GwikiItem.cache = {}
 GwikiItem.consumableTypes = [
     'application/vnd.google-apps.folder',
     'application/vnd.google-apps.document',
@@ -166,4 +295,8 @@ GwikiItem.consumableTypes = [
     'application/pdf',
     'text/plain'
 ];
+
+GwikiItem.strings = {
+    'errParentInvalid' : "Objects in the parents collection must be either strings representing parentIds or fully instantiated GwikiItems."
+}
 

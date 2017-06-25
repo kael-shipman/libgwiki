@@ -16,6 +16,7 @@
     <!-- Now include all of our program libraries -->
     <script type="text/javascript" src="/assets/Utils.js"></script>
     <script type="text/javascript" src="/assets/Gwiki.js"></script>
+    <script type="text/javascript" src="/assets/GwikiItem.js"></script>
     <script type="text/javascript" src="/assets/GwikiUI.js"></script>
     <script type="text/javascript" src="/assets/GwikiBridge.js"></script>
 
@@ -59,7 +60,7 @@
 
 <!-- Load google's api -->
 <script async defer src="https://apis.google.com/js/api.js"
-    onload="this.onload=function(){};gapi.load('client:auth2', function() { window.gwikiBridge.init(YOUR_CLIENT_ID, DISCOVERY_DOCS, SCOPE, YOUR_API_KEY) });"
+    onload="this.onload=function(){};gapi.load('client:auth2', function() { window.gwikiBridge.init(gapi, YOUR_CLIENT_ID, DISCOVERY_DOCS, SCOPE, YOUR_API_KEY) });"
     onreadystatechange="if (this.readyState === 'complete') this.onload()">
 </script>
 </body>

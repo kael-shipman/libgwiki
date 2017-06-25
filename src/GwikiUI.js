@@ -105,6 +105,8 @@ GwikiUI.prototype.init = function() {
     // Information updates
     this.gwiki.addEventListener('setHome', function(e) { t.onSetHome(e); });
     this.gwiki.addEventListener('setCurrentItem', function(e) { t.onSetCurrentItem(e); });
+    this.gwiki.addEventListener('rectifyTree', function(e) { t.drawSideMenu(e); t.updateMenuSelections(e); });
+    this.gwiki.addEventListener('updateNavStack', function(e) { t.drawBreadcrumbs(e); });
 
     // Signin status
     this.bridge.addEventListener('signinStatusChanged', function(e) { t.toggleSignedIn(); });
@@ -157,8 +159,6 @@ GwikiUI.prototype.updateFromUrl = function() {
     if (this.defaultHome) home = this.defaultHome;
 
     this.updateState(home, doc);
-
-    this.toggleSignedIn();
 }
 
 
@@ -168,7 +168,7 @@ GwikiUI.prototype.onSetHome = function(e) {
     if (e.target.home) this.home = e.target.home.id;
     else this.home = null;
     this.updateState(this.home, this.doc);
-    this.rebuildFrame();
+    this.drawHeader();
     this.loading(false);
 }
 
@@ -179,7 +179,7 @@ GwikiUI.prototype.onSetCurrentItem = function(e) {
     if (e.target.currentItem) this.doc = e.target.currentItem.id;
     else this.doc = false;
     this.updateState(this.home, this.doc);
-    this.rebuildItemInterface();
+    this.drawMainContent();
     this.loading(false);
 }
 
@@ -229,8 +229,8 @@ GwikiUI.prototype.toggleSignedIn = function() {
             if (this.home) this.gwiki.setHome(this.home, this.doc);
             else this.askForHome();
         } else {
-            this.rebuildFrame();
-            if (this.gwiki.currentItem.id == this.doc) this.rebuildItemInterface();
+            this.drawHeader();
+            if (this.gwiki.currentItem.id == this.doc) this.drawMainContent();
             else this.gwiki.setCurrentItem(this.doc);
         }
     } else {
@@ -247,11 +247,10 @@ GwikiUI.prototype.toggleSignedIn = function() {
 
 
 // Rebuild essential elements of frame
-GwikiUI.prototype.rebuildFrame = function() {
+GwikiUI.prototype.drawHeader = function() {
     var t = this;
 
     // Title
-    document.title = this.gwiki.home.displayName;
     this.siteTitle.innerHTML = this.gwiki.home.displayName;
     this.siteTitle.gobject = this.gwiki.home;
 
@@ -260,18 +259,19 @@ GwikiUI.prototype.rebuildFrame = function() {
     this.mainMenuContainer.innerHTML = '';
     this.mainMenu = [];
 
-    for (var i = 0; i < this.gwiki.mainMenu.length; i++) {
+    for (var i = 0, child; i < this.gwiki.home.children.length; i++) {
+        child = this.gwiki.home.children[i];
         this.mainMenu[i] = document.createElement('a');
-        this.mainMenu[i].href = "#"+this.gwiki.mainMenu[i].id;
-        this.mainMenu[i].innerHTML = this.gwiki.mainMenu[i].displayName;
-        this.mainMenu[i].setAttribute('data-gid', this.gwiki.mainMenu[i].id);
-        this.mainMenu[i].gobject = this.gwiki.mainMenu[i];
+        this.mainMenu[i].href = "#"+child.id;
+        this.mainMenu[i].innerHTML = child.displayName;
+        this.mainMenu[i].setAttribute('data-gid', child.id);
+        this.mainMenu[i].gobject = child;
         this.mainMenuContainer.appendChild(this.mainMenu[i]);
 
         // Click listener
         this.mainMenu[i].addEventListener('click', function(e) {
             e.preventDefault();
-            t.gwiki.setCurrentItem(e.target.gobject);
+            t.gwiki.setCurrentItem(e.target.gobject, false);
         });
     }
 }
@@ -279,58 +279,116 @@ GwikiUI.prototype.rebuildFrame = function() {
 
 
 // Rebuild the interface elements pertaining to "item"
-GwikiUI.prototype.rebuildItemInterface = function() {
+GwikiUI.prototype.drawMainContent = function() {
     var t = this;
 
-    // If there's no current item selected, reset interface
-    if (!this.gwiki.currentItem) {
-        this.mainContent.innerHTML = GwikiUI.strings['errNoContent'].replace('$id', this.gwiki.parents[0].id);
+    // If we can't get content, say so
+    if (!this.gwiki.currentItem.bodySrc) {
+        this.mainContent.innerHTML = GwikiUI.strings['errNoContent'].replace('$id', this.gwiki.currentItem.id);
 
     // Otherwise, set content
     } else {
-        if (this.gwiki.currentItem.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.parseMarkdown(this.gwiki.currentItem.body);
-        else if (this.gwiki.currentItem.gwikiType == 'text/html') this.mainContent.innerHTML = this.cleanHtml(this.gwiki.currentItem.body);
+        if (this.gwiki.currentItem.bodySrc.gwikiType == 'text/markdown') this.mainContent.innerHTML = this.parseMarkdown(this.gwiki.currentItem.body);
+        else if (this.gwiki.currentItem.bodySrc.gwikiType == 'text/html') this.mainContent.innerHTML = this.cleanHtml(this.gwiki.currentItem.body);
         else {
             var str = this.getEmbedString();
             this.mainContent.innerHTML = this.getEmbedString();
         }
         this.parseContentLinks();
     }
+}
 
 
-    // Select main menu item
-    var selectedMainItem = this.gwiki.parents[this.gwiki.parents.length-2];
+GwikiUI.prototype.updateMenuSelections = function() {
+    var selected = this.getSelectedSubtree();
+
+    // Do main menu
     for (var i = 0; i < this.mainMenu.length; i++) {
-        if (selectedMainItem && this.mainMenu[i].gobject.name == selectedMainItem.name) this.mainMenu[i].classList.add('selected');
+        if (selected && this.mainMenu[i].gobject.id == selected.id) this.mainMenu[i].classList.add('selected');
         else this.mainMenu[i].classList.remove('selected');
     }
 
+    // Submenu is already done. Exit.
+    return true;
+}
 
-    // Create sub menu
+
+
+GwikiUI.prototype.drawSideMenu = function() {
+    console.log("Drawing side menu");
+    // Clear submenu
     this.subMenu = [];
     this.subMenuContainer.innerHTML = '';
-    if (this.gwiki.parents.length > 1) {
-        for (var i = 0; i < this.gwiki.parents[0].children.length; i++) {
-            this.subMenu[i] = document.createElement('a');
-            this.subMenu[i].href = "#"+this.gwiki.parents[0].children[i].id;
-            this.subMenu[i].innerHTML = this.gwiki.parents[0].children[i].displayName;
-            this.subMenu[i].setAttribute('data-gid', this.gwiki.parents[0].children[i].id);
-            this.subMenu[i].gobject = this.gwiki.parents[0].children[i];
-            this.subMenuContainer.appendChild(this.subMenu[i]);
 
-            // Click listener
-            this.subMenu[i].addEventListener('click', function(e) {
-                e.preventDefault();
-                t.gwiki.setCurrentItem(e.target.gobject);
-            });
-
-            // If this looks like the group header, make it stand out
-            if (this.gwiki.parents[0].displayName == this.gwiki.parents[0].children[i].displayName) this.subMenu[i].classList.add('gwiki-group-header');
-
-            // If this one is selected, show that
-            if (this.gwiki.currentItem && this.gwiki.parents[0].children[i].displayName == this.gwiki.currentItem.displayName) this.subMenu[i].classList.add('selected');
-        }
+    var subtree = this.getSelectedSubtree();
+    if (!subtree) {
+        this.subMenuContainer.innerHTML = GwikiUI.strings['errNoSubtree'];
+        console.warn('The currently selected page doesn\'t appear to be contained within the home folder you\'ve set. See object dump below:');
+        console.log(this.gwiki.currentItem);
+        return false;
     }
+
+    this.subMenuContainer.appendChild(this.buildHierarchicalMenu(subtree));
+}
+
+
+GwikiUI.prototype.buildHierarchicalMenu = function(node) {
+    var t = this, item, container, submenu;
+
+    container = document.createElement('div');
+    container.className = 'menu-container';
+
+    item = document.createElement('a');
+    item.href = "#"+node.id;
+    item.innerHTML = node.displayName;
+    item.setAttribute('data-gid', node.id);
+    item.gobject = node;
+
+    // Click listener
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        t.gwiki.setCurrentItem(node, false);
+    });
+
+    // Mark selected, if pertinent
+    var p = this.gwiki.currentItem;
+    while (p.parents && !p.parents[0].isHome) {
+        if (p.id == node.id) {
+            item.classList.add('selected');
+            break;
+        }
+        p = p.parents[0];
+    }
+
+    container.appendChild(item);
+
+    if (node.children && node.children.length > 0) {
+        submenu = document.createElement('nav');
+        item.className = 'side-menu';
+        for (var i = 0; i < node.children.length; i++) {
+            submenu.appendChild(this.buildHierarchicalMenu(node.children[i]));
+        }
+        container.appendChild(submenu);
+    }
+
+    return container;
+}
+
+
+GwikiUI.prototype.drawBreadcrumbs = function() {
+}
+
+
+
+GwikiUI.prototype.getSelectedSubtree = function() {
+    var selected;
+    if (this.gwiki.currentItem.isHome) selected = null;
+    else {
+        selected = this.gwiki.currentItem;
+        while (selected.parents && !selected.parents[0].isHome) selected = selected.parents[0];
+    }
+    if (selected && !selected.parents[0].isHome) selected = null;
+    return selected;
 }
 
 
@@ -472,8 +530,9 @@ GwikiUI.prototype.cleanHtml = function(html) {
 
 GwikiUI.prototype.getEmbedString = function() {
     var i = this.gwiki.currentItem;
-    return '<iframe class="google-doc" src="https://drive.google.com/file/d/'+i.id+'/preview">';
+    if (i.bodySrc) return '<iframe class="google-doc" src="https://drive.google.com/file/d/'+i.bodySrc.id+'/preview">';
     //else return GwikiUI.strings['errUnknownEmbedType'].replace('$type', i.mimeType);
+    else return '';
 }
 
 
@@ -537,6 +596,7 @@ GwikiUI.strings = {
     'prompt-homefolder' : 'Home Folder: ',
 
     'errNoContent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.',
-    'errUnknownEmbedType' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type.</p>'
+    'errUnknownEmbedType' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type.</p>',
+    'errNoSubtree' : '(menu not available)'
 }
 

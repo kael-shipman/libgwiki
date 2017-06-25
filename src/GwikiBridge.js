@@ -1,5 +1,6 @@
 GwikiBridge = function(opts) {
     Utils.merge(this, {
+        api : null,
         options : {
             initTimeout : 8,
             initCheckInterval : .5
@@ -16,38 +17,31 @@ GwikiBridge.interface = [ 'init', 'signin' ];
 Utils.makeObservable(GwikiBridge);
 
 
-GwikiBridge.prototype.init = function(clientId, discoveryDocs, scope, apikey) {
+GwikiBridge.prototype.init = function(api, clientId, discoveryDocs, scope, apikey) {
     var t = this;
 
-    // Make sure we've got gapi
-    if (typeof gapi == 'undefined' || typeof gapi.client == 'undefined') {
-        if (this.initTimer > initTimeout) {
-            this.dispatchEvent('error', { type : 'initTimeout', message : GwikiBridge.strings['errInitTimeout'] });
-            var err = "Waited "+this.initTimer+" seconds for Google's gapi object and it never showed up. "
-                err += "The `init` method *should* be called when gapi successfully loads, so you may not be "
-                err += "using it correctly. Read Google's [Quick Start Guide](https://developers.google.com/drive/v3/web/quickstart/js) "
-                err += "for an example of how to succesfully load gapi.";
-            throw err
-        }
-        this.initTimer = this.initTimer*1 + this.options.initCheckInterval*1;
-        setTimeout(function() { t.init(clientId); }, this.options.initCheckInterval*1000);
-        return;
+    this.api = api;
+
+    // Make sure we've got an api client
+    if (typeof this.api == 'undefined' || typeof this.api.client == 'undefined') {
+        this.dispatchEvent('error', { type : 'noApiClient', message : GwikiBridge.strings['noApiClient'] });
+        throw GwikiBridge.strings['errNoApiClient'];
     }
 
 
     // Initialize the google api
-    if (apikey) gapi.client.setApiKey(apikey);
-    gapi.client.init({
+    if (apikey) this.api.client.setApiKey(apikey);
+    this.api.client.init({
         clientId: clientId,
         discoveryDocs: discoveryDocs,
         scope: scope
     }).then(function () {
         // When the client is ready, create signinStatus event passthrough and notify initialized
-        gapi.auth2.getAuthInstance().isSignedIn.listen(function (signedIn) {
+        t.api.auth2.getAuthInstance().isSignedIn.listen(function (signedIn) {
             t.signedIn = signedIn
             t.dispatchEvent('signinStatusChanged');
         });
-        t.signedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+        t.signedIn = t.api.auth2.getAuthInstance().isSignedIn.get();
         t.dispatchEvent('init');
         t.dispatchEvent('signinStatusChanged');
     });
@@ -57,22 +51,22 @@ GwikiBridge.prototype.init = function(clientId, discoveryDocs, scope, apikey) {
 
 // Signin
 GwikiBridge.prototype.signin = function() {
-    gapi.auth2.getAuthInstance().signIn();
+    this.api.auth2.getAuthInstance().signIn();
 }
 
 
 
 // Get Items
-GwikiBridge.prototype.getItemById = function(id, t) {
-    var callback;
-    if (!t) t = this;
+GwikiBridge.prototype.getItemById = function(id, userParams) {
+    var t = this, callback;
+    var params = { 'fields' : 'id,name,mimeType,parents' };
+    Utils.merge(params, userParams || {});
+    params['fileId'] = id;
 
-    gapi.client.drive.files.get({
-        'fileId' : id
-    }).then(function(response) {
+    this.api.client.drive.files.get(params).then(function(response) {
         var gwikiItemProps = response.result;
         t.dispatchEvent('getItem', { "gwikiItemProps" : gwikiItemProps });
-        if (callback) callback.call(t, gwikiItemProps);
+        if (callback) callback(gwikiItemProps);
     });
 
     return { then : function(c) { callback = c; } };
@@ -81,14 +75,13 @@ GwikiBridge.prototype.getItemById = function(id, t) {
 
 
 // Get Children
-GwikiBridge.prototype.getChildrenFor = function(gwikiItem, userParams, t) {
-    var callback;
+GwikiBridge.prototype.getChildrenFor = function(gwikiItem, userParams) {
+    var t = this, callback;
     var params = {
         'pageSize' : 1000,
-        'fields' : 'files(id, name, mimeType)'
+        'fields' : 'files(id, name, mimeType, parents)'
     };
     Utils.merge(params, userParams || {});
-    if (!t) t = this;
 
     // Sanity check
     if (typeof gwikiItem == 'object') {
@@ -97,10 +90,53 @@ GwikiBridge.prototype.getChildrenFor = function(gwikiItem, userParams, t) {
     }
     params['q'] = "'"+gwikiItem+"' in parents and trashed = false",
 
-    gapi.client.drive.files.list(params).then(function(response) {
+    this.api.client.drive.files.list(params).then(function(response) {
         var children = response.result.files;
         t.dispatchEvent('getChildren', { "for" : gwikiItem, "children" : children });
-        if (callback) callback.call(t, children);
+        if (callback) callback(children);
+    });
+
+    return { then : function(c) { callback = c } };
+}
+
+
+
+
+// Download Content
+GwikiBridge.prototype.downloadContent = function(gwikiItem, userParams) {
+    var t = this, callback;
+    var params = { 'alt' : 'media' };
+    Utils.merge(params, userParams || {});
+
+    if (typeof gwikiItem == 'object') {
+        if (!gwikiItem.id) throw "GwikiBridge::downloadContent must receive either an item id (string) or a GwikiItem with an `id` property as its argument. The object you've passed doesn't appear to have an `id` property set.";
+        gwikiItem = gwikiItem.id;
+    }
+    params['fileId'] = gwikiItem;
+
+    this.api.client.drive.files.get(params).then(function(response) {
+        if (callback) callback(response.body);
+    });
+
+    return { then : function(c) { callback = c } };
+}
+
+
+
+// Export Content
+GwikiBridge.prototype.exportContent = function(gwikiItem, userParams) {
+    var t = this, callback;
+    var params = { 'mimeType' : 'text/html' };
+    Utils.merge(params, userParams || {});
+
+    if (typeof gwikiItem == 'object') {
+        if (!gwikiItem.id) throw "GwikiBridge::exportContent must receive either an item id (string) or a GwikiItem with an `id` property as its argument. The object you've passed doesn't appear to have an `id` property set.";
+        gwikiItem = gwikiItem.id;
+    }
+    params['fileId'] = gwikiItem;
+
+    this.api.client.drive.files.export(params).then(function(response) {
+        if (callback) callback(response.body);
     });
 
     return { then : function(c) { callback = c } };
@@ -114,5 +150,6 @@ GwikiBridge.prototype.getChildrenFor = function(gwikiItem, userParams, t) {
 
 // Strings
 GwikiBridge.strings = {
-    'errInitTimeout' : 'Sorry, something went wrong :(. Please reload the page to try again.'
+    'errGeneral' : 'Sorry, something went wrong :(. Please reload the page to try again.',
+    'errNoApiClient' : "No API Client was handed to the init function. Usually, you'll call `GwikiBridge::init` on Google's API client `onload` event, which should allow you to pass the `gapi` global variable to `GwikiBridge::init`."
 }
