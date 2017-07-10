@@ -74,8 +74,8 @@ GwikiItem.prototype.setExtraAttributes = function() {
     // Remove prefixes and suffixes for display names
     if (this.displayName === null && this.name) {
         var displayName = this.name;
-        var prefix = displayName.match(/^[0-9_. -]/);
-        var suffix = displayName.match(/\..{1,4}$/);
+        var prefix = displayName.match(/^[0-9_. -]+/);
+        var suffix = displayName.match(/\.[^ ]{1,4}$/);
         if (prefix) displayName = displayName.substr(prefix[0].length);
         if (suffix) displayName = displayName.substr(0, (displayName.length - suffix[0].length));
         this.displayName = displayName;
