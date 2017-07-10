@@ -195,19 +195,7 @@ GwikiUI.prototype.askForHome = function() {
 
         var link = document.getElementById("homeFolder").value;
 
-        var re = new RegExp('^'+GwikiUI.validGoogleId+'$');
-        var folderId = link.match(re);
-        if (folderId) folderId = folderId[0];
-        else {
-            var re = new RegExp('\bid=('+GwikiUI.validGoogleId+')');
-            var folderId = link.match(re);
-            if (folderId) folderId = folderId[1];
-            else {
-                re = new RegExp('/folder/('+GwikiUI.validGoogleId+')');
-                folderId = link.match(re);
-                if (folderId) folderId = folderId[1];
-            }
-        }
+        var folderId = this.getIdFromUrl(link);
 
         // Show error if no valid id found
         if (!folderId) alert('Invalid Id! Please enter either the full url from a google drive folder, or just the id part.');
@@ -544,7 +532,7 @@ GwikiUI.prototype.parseMarkdown = function(md) {
 
 
 GwikiUI.prototype.parseContentLinks = function() {
-    var t = this;
+    var t = this, docId;
     var links = this.mainContent.getElementsByTagName('a');
     for (var i = 0; i < links.length; i++) {
         // If we're instructed not to touch it, don't touch it
@@ -552,20 +540,21 @@ GwikiUI.prototype.parseContentLinks = function() {
 
         // If this is a google drive link, try to load it on this page
         // TODO: Figure out how to fall back if this is not a page in this hierarchy
-        if (links[i].href.match(/\.google\.com\/.+\/(d|folders)\/[a-zA-Z0-9._-]+/)) {
-            links[i].addEventListener('click', function(e) {
-                var id = e.target.href.match(/\.google\.com\/.+\/(d|folders)\/([a-zA-Z0-9._-]+)/);
+        docId = this.getIdFromUrl(links[i].href);
+        if (docId) {
+            (function(gid) {
+                links[i].addEventListener('click', function(e) {
+                    // If we can't figure it out, leave it
+                    if (!gid) {
+                        e.target.target = '_blank';
+                        return true;
+                    }
 
-                // If we can't figure it out, leave it
-                if (!id) {
-                    e.target.target = '_blank';
-                    return true;
-                }
-
-                // Otherwise, redirect it
-                e.preventDefault();
-                t.gwiki.setCurrentItem(id[2]);
-            });
+                    // Otherwise, redirect it
+                    e.preventDefault();
+                    t.gwiki.setCurrentItem(gid);
+                });
+            })(docId);
 
         // If it's not a google link, make sure it opens outside
         } else {
@@ -575,12 +564,30 @@ GwikiUI.prototype.parseContentLinks = function() {
 }
 
 
+GwikiUI.prototype.getIdFromUrl = function(url) {
+    var re = new RegExp('^'+GwikiUI.validGoogleId+'$');
+    var folderId = url.match(re);
+    if (folderId) folderId = folderId[0];
+    else {
+        re = new RegExp('(drive|docs|spreadsheets)\.google\.com/.+?\\bid(=|%3D)('+GwikiUI.validGoogleId+')');
+        folderId = url.match(re);
+        if (folderId) folderId = folderId[3];
+        else {
+            re = new RegExp('(drive|docs|spreadsheets)\.google\.com/.+/('+GwikiUI.validGoogleId+')(/|\\?|$)');
+            folderId = url.match(re);
+            if (folderId) folderId = folderId[2];
+        }
+    }
+    return folderId;
+}
+
+
 
 
 
 // Class constants
 
-GwikiUI.validGoogleId = '[a-zA-Z0-9_-]+';
+GwikiUI.validGoogleId = '[a-zA-Z0-9_-]{16,}';
 
 GwikiUI.strings = {
     'title' : 'Gwiki',
