@@ -309,8 +309,12 @@ GwikiUI.prototype.drawSideMenu = function() {
 
     var subtree = this.getSelectedSubtree();
     if (!subtree) {
+        // If we're home, then of course there's no menu; just return
+        if (this.gwiki.currentItem.isHome) return;
+
+        // Otherwise, show an error
         this.subMenuContainer.innerHTML = GwikiUI.strings['errNoSubtree'];
-        console.warn('The currently selected page doesn\'t appear to be contained within the home folder you\'ve set. See object dump below:');
+        console.warn(GwikiUI.strings['warnNoSubtree']);
         console.log(this.gwiki.currentItem);
         return false;
     }
@@ -600,6 +604,8 @@ GwikiUI.strings = {
 
     'errNoContent' : '<h1>No Content</h1><p>Sorry, it looks like this is an empty folder. You can add content to it by simply adding docs to it. Open the folder  <a href="https://drive.google.com/drive/folders/$id" target="_blank">here</a> to add some content.',
     'errUnknownEmbedType' : '<h1>Unknown Type</h1><p>Sorry, I\'m not sure how to handle this document. You can register a handler for this document type by overriding the <code>Gwiki.prototype.getEmbedString</code> method, but be sure that if you do, you capture the previous method and call it, too, so you can be sure to handle all of the already-supported types.</p><p>The type you need to handle is $type.</p>',
-    'errNoSubtree' : '(menu not available)'
+    'errNoSubtree' : '(menu not available)',
+
+    'warnNoSubtree' : 'The currently selected page doesn\'t appear to be contained within the home folder you\'ve set. See object dump below:'
 }
 
