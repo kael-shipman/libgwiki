@@ -195,7 +195,7 @@ GwikiUI.prototype.askForHome = function() {
 
         var link = document.getElementById("homeFolder").value;
 
-        var folderId = this.getIdFromUrl(link);
+        var folderId = t.getIdFromUrl(link);
 
         // Show error if no valid id found
         if (!folderId) alert('Invalid Id! Please enter either the full url from a google drive folder, or just the id part.');
