@@ -284,6 +284,9 @@ GwikiUI.prototype.drawMainContent = function() {
         }
         this.parseContentLinks();
     }
+
+    // Now scroll to the top
+    this.mainContent.scrollTop = 0;
 }
 
 
