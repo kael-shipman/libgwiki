@@ -13,7 +13,8 @@ GwikiUI = function(opts) {
     if (typeof this.root == 'undefined' || typeof this.root.appendChild == 'undefined') throw "You must provide a root ui element as part of the options hash when you construct a GwikiUI object (something like `new GwikiUI({ root: document.getElementById('gwiki-ui') })`)";
 
     // Load window.popstate listener for back/forward events
-    window.onpopstate = function(e) { t.updateFromUrl(); }
+    // TODO: use state popped to update object state
+    window.onpopstate = function(e) { t.updateState(); }
 
     // Make initial UI
 
@@ -100,7 +101,6 @@ GwikiUI.prototype.init = function() {
     // Add event listeners
     // Errors
     this.gwiki.addEventListener('error', function(e) { t.block(e.message); });
-    this.bridge.addEventListener('error', function(e) { t.block(e.message); });
 
     // Information updates
     this.gwiki.addEventListener('setHome', function(e) { t.onSetHome(e); });
