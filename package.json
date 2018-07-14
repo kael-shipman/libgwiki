@@ -1,0 +1,30 @@
+{
+    "name": "@kael-shipman/libgwiki",
+    "description": "A simple library that provides infrastructure for turning a Google Drive folder into a browsable wiki.",
+    "version": "1.1.0",
+    "homepage": "https://gwiki.kaelshipman.me",
+    "bugs": "https://github.com/kael-shipman/libgwiki/issues",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/kael-shipman/libgwiki.git"
+    },
+    "author": {
+        "name": "Kael Shipman",
+        "email": "kael.shipman@gmail.com",
+        "url": "https://colors.kaelshipman.me"
+    },
+    "contributors": {
+        "name": "Contributors",
+        "url": "https://github.com/kael-shipman/libgwiki/graphs/contributors"
+    },
+    "files": [
+        "src/*"
+    ],
+    "devDependencies": {
+        "@types/mocha": "^5.2.4",
+        "mocha": "^5.2.0",
+        "ts-node": "^7.0.0",
+        "typescript": "^2.9.2"
+    }
+}
