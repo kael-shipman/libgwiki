@@ -1,6 +1,7 @@
-/vendor
 *.swp
 *.swo
 config.local.js
 node_modules
+dist
+build
 

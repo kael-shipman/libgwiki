@@ -25,7 +25,7 @@
 </head>
 <body>
 
-<!-- Give the Gwiki a root element and it'll do the rest -->
+<!-- Give Gwiki a root element and it'll do the rest -->
 <div class="gwiki-ui">
 </div>
 
@@ -33,36 +33,28 @@
 <script type="text/javascript">
     // This is where you can customize.
     // You might add more consumable types using `Gwiki.consumableTypes.push('my/mime.type')`,
-    // or you might change some of the interface strings by overriding keys in `GwikiUi.strings`
+    // or you might internationalize by swapping out the `GwikiUI.strings` map
 
-
-    // Instantiate Gwiki workers (attach to window for easy debugging and playing)
-    window.gwiki = new Gwiki();
-    window.gwikiBridge = new GwikiBridge();
-    window.gwikiUI = new GwikiUI({
-        root : document.getElementsByClassName('gwiki-ui')[0],
-        gwiki: window.gwiki,
-        bridge : window.gwikiBridge,
-        markdownParser: function() { var c = new Markdown.Converter(); Markdown.Extra.init(c); this.markdownParser = c; },
-        defaultHome : null,
-        config: {
-            prettyUrls : false
-        }
-    });
-
-    // Hook everything up through events
-    window.gwikiBridge.addEventListener('init', function(e) { window.gwikiUI.init() });
-    window.gwikiBridge.addEventListener('error', function(e) { window.gwikiUI.block(e.message); });
-    //window.gwikiBridge.addEventListener('signinStatusChanged', function(e) { if (e.target.signedIn) gwiki.setHome('0BwZTf0F3YjSmcDN3TXRMc0lUeTQ'); });
-    //window.gwikiUI.subscribeGwikiListeners(window.gwiki);
-    //window.gwikiUI.subscribeGwikiBridgeListeners(window.gwikiBridge);
-    //window.gwikiBridge.addEventListener('init', function(e) { window.gwiki.init(e.target); });
+    function loadGwiki() {
+        // Instantiate Gwiki workers (attach to window for easy debugging and playing)
+        window.gwiki = new Gwiki(gapi, YOUR_CLIENT_ID, DISCOVERY_DOCS, SCOPE, YOUR_API_KEY);
+        window.gwikiUI = new GwikiUI({
+            root: document.getElementsByClassName('gwiki-ui')[0],
+            gwiki: window.gwiki,
+            markdownParser: function() { var c = new Markdown.Converter(); Markdown.Extra.init(c); return c; },
+            defaultHome: null,
+            defaultNode: null,
+            config: {
+                prettyUrls : false
+            }
+        });
+    }
 </script>
 
 <!-- Load google's api -->
 <script async defer src="https://apis.google.com/js/api.js"
-    onload="this.onload=function(){};gapi.load('client:auth2', function() { window.gwikiBridge.init(gapi, YOUR_CLIENT_ID, DISCOVERY_DOCS, SCOPE, YOUR_API_KEY) });"
-    onreadystatechange="if (this.readyState === 'complete') this.onload()">
+                    onload="this.onload=function(){}; gapi.load('client:auth2', loadGwiki);"
+                    onreadystatechange="if (this.readyState === 'complete') this.onload()">
 </script>
 </body>
 </html>

@@ -21,10 +21,16 @@
     "files": [
         "src/*"
     ],
+    "main": "dist/index.js",
+    "dependencies": {
+        "@types/deepmerge": "^2.1.0",
+        "deepmerge": "^2.1.1"
+    },
     "devDependencies": {
         "@types/mocha": "^5.2.4",
         "mocha": "^5.2.0",
+        "chai": "^4.1.2",
         "ts-node": "^7.0.0",
-        "typescript": "^2.9.2"
+        "typescript": "^3.0.0"
     }
 }
