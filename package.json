@@ -21,10 +21,21 @@
     "files": [
         "src/*"
     ],
+    "main": "dist/index.js",
+    "scripts": {
+        "test": "mocha -r 'ts-node/register' tests/*Test.ts"
+    },
+    "dependencies": {
+        "deepmerge": "^2.1.1"
+    },
     "devDependencies": {
         "@types/mocha": "^5.2.4",
+        "@types/chai": "^4.1.2",
+        "@types/deepmerge": "^2.1.0",
+        "@types/node": "^10.0.6",
         "mocha": "^5.2.0",
+        "chai": "^4.1.2",
         "ts-node": "^7.0.0",
-        "typescript": "^2.9.2"
+        "typescript": "^3.0.0"
     }
 }
