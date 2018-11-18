@@ -2,6 +2,18 @@
 
 *A simple single-page app that turns any google drive folder into a traversable wiki*
 
+> 
+> **Note:** I'm in the middle of building a v2 of this library. You can find that in the `v2.x` branch, though very little concrete progress has been made on it at the time of this writing. My goals for v2 are the following:
+> 
+> * Convert to typescript
+> * Formalize gwiki concepts as a _library,_ rather than an application
+> * Use the library to implement a finished application
+> 
+> Turning this into a pure library will likely involve viewing it as a general abstraction over -- and extension of -- cloud storage. By the end of the process, I hope to be able to use it as if it were an API SDK for a storage provider that was designed to serve a wiki.
+> 
+> Anyway, you can keep track of progress over in the `v2.x` branch.
+> 
+
 Google Drive is a fantastic solution for shared documents, and there's always a temptation to turn it into a wiki. Among its many other great qualities, it has a very well-built and highly granular permissions system that allows you to share very specific parts of document hierarchies with arbitrary people, even anonymous web users (this permissions system is one of its most attractive characteristics for me).
 
 However, it doesn't work well as a wiki because each document opens its own tab with no shared navigation. This is awkward and frustrating, not to mention resource hungry as dozens of heavy tabs start laying around your browser.
