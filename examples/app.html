@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=2.0">
+    <title>GWiki</title>
+
+    <!-- Bring in the Gwiki Styles -->
+    <link type="text/css" rel="stylesheet" href="/assets/base.css">
+    <link type="text/css" rel="stylesheet" href="/assets/Gwiki.css">
+
+    <!-- Make sure we've got a markdown parser -->
+    <script type="text/javascript" src="/vendor/stackexchange/pagedown/Markdown.Converter.js"></script>
+    <script type="text/javascript" src="/vendor/jmcmanus/pagedown-extra/Markdown.Extra.js"></script>
+
+    <!-- Now include all of our program libraries -->
+    <script type="text/javascript" src="/assets/Utils.js"></script>
+    <script type="text/javascript" src="/assets/Gwiki.js"></script>
+    <script type="text/javascript" src="/assets/GwikiItem.js"></script>
+    <script type="text/javascript" src="/assets/GwikiUI.js"></script>
+    <script type="text/javascript" src="/assets/GwikiBridge.js"></script>
+
+    <!-- Local config (this is where YOUR_CLIENT_ID is set) -->
+    <script type="text/javascript" src="/assets/config.local.js"></script>
+</head>
+<body>
+
+<!-- Give the Gwiki a root element and it'll do the rest -->
+<div class="gwiki-ui">
+</div>
+
+<!-- Now initialize everything -->
+<script type="text/javascript">
+    // This is where you can customize.
+    // You might add more consumable types using `Gwiki.consumableTypes.push('my/mime.type')`,
+    // or you might change some of the interface strings by overriding keys in `GwikiUi.strings`
+
+
+    // Instantiate Gwiki workers (attach to window for easy debugging and playing)
+    window.gwiki = new Gwiki();
+    window.gwikiBridge = new GwikiBridge();
+    window.gwikiUI = new GwikiUI({
+        root : document.getElementsByClassName('gwiki-ui')[0],
+        gwiki: window.gwiki,
+        bridge : window.gwikiBridge,
+        markdownParser: function() { var c = new Markdown.Converter(); Markdown.Extra.init(c); this.markdownParser = c; },
+        defaultHome : null,
+        config: {
+            prettyUrls : false
+        }
+    });
+
+    // Hook everything up through events
+    window.gwikiBridge.addEventListener('init', function(e) { window.gwikiUI.init() });
+    window.gwikiBridge.addEventListener('error', function(e) { window.gwikiUI.block(e.message); });
+    //window.gwikiBridge.addEventListener('signinStatusChanged', function(e) { if (e.target.signedIn) gwiki.setHome('0BwZTf0F3YjSmcDN3TXRMc0lUeTQ'); });
+    //window.gwikiUI.subscribeGwikiListeners(window.gwiki);
+    //window.gwikiUI.subscribeGwikiBridgeListeners(window.gwikiBridge);
+    //window.gwikiBridge.addEventListener('init', function(e) { window.gwiki.init(e.target); });
+</script>
+
+<!-- Load google's api -->
+<script async defer src="https://apis.google.com/js/api.js"
+    onload="this.onload=function(){};gapi.load('client:auth2', function() { window.gwikiBridge.init(gapi, YOUR_CLIENT_ID, DISCOVERY_DOCS, SCOPE, YOUR_API_KEY) });"
+    onreadystatechange="if (this.readyState === 'complete') this.onload()">
+</script>
+</body>
+</html>
