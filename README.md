@@ -89,5 +89,5 @@ Returns true if `node` is an ancestor of the node on which this is called.
 
 ##### `hasDescendent(node: GwikiNode|id): boolean`
 
-Returns ture if `node` is a descendent of the node on which this is called.
+Returns true if `node` is a descendent of the node on which this is called.
 

@@ -12,49 +12,43 @@
     <!-- Make sure we've got a markdown parser -->
     <script type="text/javascript" src="/vendor/stackexchange/pagedown/Markdown.Converter.js"></script>
     <script type="text/javascript" src="/vendor/jmcmanus/pagedown-extra/Markdown.Extra.js"></script>
-
-    <!-- Now include all of our program libraries -->
-    <script type="text/javascript" src="/assets/Utils.js"></script>
-    <script type="text/javascript" src="/assets/Gwiki.js"></script>
-    <script type="text/javascript" src="/assets/GwikiItem.js"></script>
-    <script type="text/javascript" src="/assets/GwikiUI.js"></script>
-    <script type="text/javascript" src="/assets/GwikiBridge.js"></script>
-
-    <!-- Local config (this is where YOUR_CLIENT_ID is set) -->
-    <script type="text/javascript" src="/assets/config.local.js"></script>
 </head>
-<body>
+<body style="text-align: center;">
+<section style="text-align: left; margin: 40px auto; padding: 20px; max-width: 850px;">
 
-<!-- Give Gwiki a root element and it'll do the rest -->
-<div class="gwiki-ui">
-</div>
+    <h1 style="font-size: 2rem; margin: 1rem 0 0;">Gwiki</h1>
+    <p style="font-size: 1.15rem; margin: 0 0 1.5rem; color: #bbb; font-style: italic;">A Google Drive-based wiki platform</p>
 
-<!-- Now initialize everything -->
-<script type="text/javascript">
-    // This is where you can customize.
-    // You might add more consumable types using `Gwiki.consumableTypes.push('my/mime.type')`,
-    // or you might internationalize by swapping out the `GwikiUI.strings` map
+    <p>Hi! This is a demo of the <em>tiny, feature-poor, not-really-finished</em> wiki interface I built over Google Drive. Google's extremely strict security policies require me to put this intro page here to explain what this is and why I'm asking for the OAuth permissions I'm asking for, so here goes.</p>
 
-    function loadGwiki() {
-        // Instantiate Gwiki workers (attach to window for easy debugging and playing)
-        window.gwiki = new Gwiki(gapi, YOUR_CLIENT_ID, DISCOVERY_DOCS, SCOPE, YOUR_API_KEY);
-        window.gwikiUI = new GwikiUI({
-            root: document.getElementsByClassName('gwiki-ui')[0],
-            gwiki: window.gwiki,
-            markdownParser: function() { var c = new Markdown.Converter(); Markdown.Extra.init(c); return c; },
-            defaultHome: null,
-            defaultNode: null,
-            config: {
-                prettyUrls : false
-            }
-        });
-    }
-</script>
+    <p><strong>This website is a DEMO. It is not meant to be used full-time by you to be your wiki.</strong> This is because signing into Google and using the wiki actually gives me read access to <em>all your google drive files,</em> which is not what you should be doing. Granted, 100% of that access remains on your browser, but in principle, you shouldn't be giving anyone that level of access who's not making your life <em>way better</em> in some concrete way.</p>
 
-<!-- Load google's api -->
-<script async defer src="https://apis.google.com/js/api.js"
-                    onload="this.onload=function(){}; gapi.load('client:auth2', loadGwiki);"
-                    onreadystatechange="if (this.readyState === 'complete') this.onload()">
-</script>
+    <p>That said, for the demo to work, you have to give me access to your files, and I promise that this page never calls back to my server or any other server to initiate connections there. All Google Drive access happens between your browser and Google servers only. If you're interested, you can also read the <a href="privacy-policy.html">privacy policy</a> and <a href="tos.html">terms of service</a> that Google forced me to write in order to keep this app online.</p>
+
+    <p>If you're still interested in demoing the app, click <a href="app.html">here</a>.</p>
+
+    <h2>Self-Hosting</h2>
+
+    <p>This app is designed to be self-hosted (specifically to avoid all the permissions mess mentioned above). To do so, follow these steps:</p>
+
+    <ol>
+        <li>Clone the repo to where you want it.</li>
+        <li>Run `composer install` (yes, I've used Composer even though this is a Javascript project because I just like it better than NPM).</li>
+        <li>Go to <a href="https://console.developers.google.com">https://console.developers.google.com</a> and create an OAuth client ID and an API key (use <a href="https://developers.google.com/drive/v3/web/quickstart/js">this</a> for guidance if you need help).</li>
+        <li>Make sure to add your hostname to the client ID and API Key whitelists.</li>
+        <li>Finally, if you're using my default setup, you'll have to copy `src/config.local.js.template` to `src/config.local.js` and enter in your new credentials. If you're not using my default setup, look at `examples/app.html` to see how I initialized everything. It's kind of a complicated process because of the way I built the app (see readme for implementation details.)</li>
+    </ol>
+
+    <p>With that, you should be able to get it up and running.</p>
+
+    <h2>Tips and Tricks</h2>
+
+    <ul>
+        <li>If you create a file with the same name as the folder that contains it, this becomes the submenu heading.</li>
+        <li>You can add numeric prefixes for ordering that will be stripped out when page titles are displayed.</li>
+        <li>You can add sufixes (like `.md`) that will also be stripped out. This can allow you to signal special mimeTypes without actually setting a special mimeType in Google Drive.</li>
+    </ul>
+
+</section>
 </body>
 </html>
