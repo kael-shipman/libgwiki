@@ -48,6 +48,16 @@ Returns the current connection state. Connection states may be one of the follow
 
 An array (possibly empty) of strings describing connection issues.
 
+##### `connect(): boolean`
+
+Uses provider implementation's API to initiate a connection (login), returning whether or not the attempt to initiate was successful. (Note, a successful initiation does not imply a successful connection.)
+
+Emits various `connection-state-changed` events as the connection state changes.
+
+##### `disconnect(): boolean`
+
+Uses provider implementation's API to disconnect (i.e., log out), returning whether or not the attempt was successful.
+
 
 ### `GwikiNode`
 
@@ -65,29 +75,29 @@ The url where the original node can be found at the provider (e.g., https://driv
 
 ##### `title: string` (readonly)
 
-Returns the title of the node. This derived from the underlying filename, which has certain characters stripped (usually file extensions and numeric prefixes).
+Returns the title of the node. This is derived from the underlying filename, which has certain characters stripped (usually file extensions and numeric prefixes).
 
 ##### `nodeType: string` (readonly)
 
-`inode` if this is an internal node (a folder), or `leaf` if it's a leaf/external node (a document).
+`folder` if this is an internal node (a folder), or `doc` if it's a leaf/external node (a document).
 
 ##### `mimeType: string` (readonly)
 
 The mime type as reported by the provider.
 
-##### `previousNode: null|GwikiNode` (readonly)
+##### `async getPreviousNode(): null|GwikiNode`
 
 Returns null or the previous node (`Gwikinode`), which may be a simple sibling of the node on which this is called or may be the final leaf node of the previous subtree.
 
-##### `nextNode: null|GwikiNode ` (readonly)
+##### `async getNextNode(): null|GwikiNode `
 
 Returns null or the next node (`GwikiNode`), which may be a simple sibling of the node on which this is called or may be the first leaf node of the next subtree.
 
-##### `hasAncestor(node: GwikiNode|id): boolean`
+##### `async hasAncestor(node: GwikiNode|id): boolean`
 
 Returns true if `node` is an ancestor of the node on which this is called.
 
-##### `hasDescendent(node: GwikiNode|id): boolean`
+##### `async hasDescendent(node: GwikiNode|id): boolean`
 
 Returns true if `node` is a descendent of the node on which this is called.
 
